@@ -1,0 +1,19 @@
+# Build output
+bin/
+obj/
+
+# VS / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+
+# Claude local settings (not for source control)
+.claude/settings.local.json

@@ -1,0 +1,571 @@
+@page
+@model WorkModel
+@{
+    ViewData["Title"] = "Work";
+}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" />
+
+<style>
+/* GridStack overrides for Work page */
+.work-grid-stack { margin-bottom: 1.5rem; }
+.work-grid-stack > .grid-stack-item > .grid-stack-item-content {
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+}
+.work-grid-stack .widget-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.work-grid-stack .widget-card.log-visible {
+    flex: 0 0 auto;
+}
+.work-grid-stack .widget-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+.work-grid-stack .widget-card.log-visible .widget-body {
+    display: none;
+}
+.work-grid-stack > .grid-stack-item > .grid-stack-item-content:hover .widget-actions { opacity: 1; }
+.work-grid-stack > .grid-stack-item > .ui-resizable-se,
+.work-grid-stack > .grid-stack-item > .ui-resizable-sw {
+    width: 16px; height: 16px; bottom: 3px;
+}
+.work-grid-stack > .grid-stack-item > .ui-resizable-se { right: 3px; }
+.work-grid-stack > .grid-stack-item > .ui-resizable-sw { left: 3px; }
+.work-grid-stack .grid-stack-placeholder > .placeholder-content {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius);
+}
+.work-prompt-preview {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 0 0 0.6rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+.work-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    align-items: center;
+}
+.work-log {
+    background: var(--code-bg, #1a1a1a);
+    color: #d4d4d4;
+    border-top: 1px solid var(--border-strong, #333);
+    padding: 0.75rem 1rem;
+    font-family: monospace;
+    font-size: 0.78rem;
+    flex: 1;
+    min-height: 60px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.work-run-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.work-run-table th, .work-run-table td {
+    padding: 0.45rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.work-run-table th { font-weight: 600; color: var(--text-muted); font-size: 0.75rem; }
+.work-run-table tr:last-child td { border-bottom: none; }
+.work-run-table .btn-icon {
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-size: 1rem; line-height: 1; padding: 0 0.25rem; opacity: 0.4;
+}
+.work-run-table tr:hover .btn-icon { opacity: 1; }
+.work-run-table .btn-icon:hover { color: var(--danger); }
+.status-completed { color: var(--success); }
+.status-failed { color: var(--danger); }
+.status-running { color: var(--accent); }
+.work-form-panel {
+    display: none;
+    margin-bottom: 1.5rem;
+}
+.work-form-panel.visible { display: block; }
+.work-src-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.3rem; }
+.work-src-chips .src-mask-btn { font-size: 0.82rem; padding: 0.25rem 0.65rem; }
+.work-src-chips .src-mask-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+</style>
+
+<div style="padding:1.5rem 1rem">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+        <div>
+            <h1 style="margin:0;font-size:1.4rem">Work</h1>
+            <p style="margin:0.2rem 0 0;font-size:0.85rem;color:var(--text-muted)">Run an AI agent on your codebase or folder, informed by your data sources.</p>
+        </div>
+        <button type="button" onclick="showJobForm()">+ New Job</button>
+    </div>
+
+    <!-- New/Edit Job Form -->
+    <div class="work-form-panel" id="job-form-panel">
+        <div class="card">
+            <h3 style="margin:0 0 1.1rem;font-size:1rem">Configure Job</h3>
+            <input type="hidden" id="jf-id" />
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                <div>
+                    <label class="text-sm text-muted">Job Name</label>
+                    <input type="text" id="jf-name" placeholder="e.g. Weekly Code Review" style="width:100%;box-sizing:border-box" />
+                </div>
+                <div>
+                    <label class="text-sm text-muted">Context Days</label>
+                    <input type="number" id="jf-days" value="7" min="1" max="90" style="width:100%;box-sizing:border-box" />
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                <div>
+                    <label class="text-sm text-muted">Target Folder</label>
+                    <select id="jf-folder" style="width:100%;box-sizing:border-box">
+                        <option value="">— select a folder source —</option>
+                        @foreach (var fs in Model.FolderSources)
+                        {
+                            <option value="@fs.Id">@fs.Name</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-muted">Agent</label>
+                    <select id="jf-agent" style="width:100%;box-sizing:border-box">
+                        <option value="">— select an agent —</option>
+                        @foreach (var a in Model.Agents)
+                        {
+                            <option value="@a.Id">@a.Name (@(a.Type == "claude-code" ? "Claude Code" : "opencode"))</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom:1rem">
+                <label class="text-sm text-muted">Data Sources <span style="opacity:0.6">(context injected into agent)</span></label>
+                <div class="work-src-chips" id="jf-sources"></div>
+            </div>
+
+            <div style="margin-bottom:1rem">
+                <label class="text-sm text-muted">Prompt <span style="opacity:0.6">(instructions for the agent)</span></label>
+                <textarea id="jf-prompt" rows="5" placeholder="Describe what the agent should do in the folder, based on context from your data sources..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
+            </div>
+
+            <div style="margin-bottom:1rem">
+                <label class="text-sm text-muted">Description <span style="opacity:0.6">(shown on widget — leave blank to auto-generate)</span></label>
+                <input type="text" id="jf-description" placeholder="Auto-generated from prompt if left blank" style="width:100%;box-sizing:border-box" />
+            </div>
+
+            <div style="margin-bottom:1.1rem">
+                <label class="text-sm text-muted">Schedule <span style="opacity:0.6">(optional — leave blank to run manually)</span></label>
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.25rem">
+                    <select id="jf-schedule-hour" style="width:10rem">
+                        <option value="">— no schedule —</option>
+                        @for (int h = 0; h < 24; h++)
+                        {
+                            var label = h == 0 ? "12:00 AM" : h < 12 ? $"{h}:00 AM" : h == 12 ? "12:00 PM" : $"{h - 12}:00 PM";
+                            <option value="@h">@label</option>
+                        }
+                    </select>
+                    <select id="jf-schedule-day" style="width:8rem">
+                        <option value="">Every day</option>
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                        <option value="0">Sunday</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:0.5rem">
+                <button type="button" onclick="saveJob(false)">Save</button>
+                <button type="button" onclick="saveJob(true)">Save &amp; Run</button>
+                <button type="button" class="secondary" onclick="hideJobForm()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Grid -->
+    @if (!Model.Jobs.Any())
+    {
+        <div class="card" id="job-empty-state">
+            <p class="text-muted" style="text-align:center;padding:2rem 0">No jobs yet. Click <strong>+ New Job</strong> to create one.</p>
+        </div>
+    }
+
+    <div class="grid-stack work-grid-stack" id="job-list">
+        @foreach (var job in Model.Jobs)
+        {
+            var isRunning = Model.RunningIds.Contains(job.Id);
+            var lastRun = Model.RecentRuns.FirstOrDefault(r => r.JobId == job.Id);
+            var agentName = Model.Agents.FirstOrDefault(a => a.Id == job.AgentId)?.Name ?? "—";
+            var folderName = Model.FolderSources.FirstOrDefault(f => f.Id == job.FolderSourceId)?.Name ?? "—";
+            var hasPos = job.GridX.HasValue && job.GridY.HasValue;
+
+            <div class="grid-stack-item" id="wi-@job.Id" gs-id="@job.Id"
+                 @Html.Raw(hasPos ? $"gs-x=\"{job.GridX}\" gs-y=\"{job.GridY}\"" : "gs-auto-position=\"true\"")
+                 gs-w="@(job.GridW ?? 6)" gs-h="@(job.GridH ?? 3)">
+                <div class="grid-stack-item-content">
+                    <div class="widget-card">
+                        <div class="widget-header">
+                            <span class="widget-drag-handle">⠿</span>
+                            <span class="widget-title">@job.Name</span>
+                            @if (isRunning)
+                            {
+                                <span class="badge badge-active" style="font-size:0.7rem;margin-right:0.1rem">● Running</span>
+                            }
+                            <div class="widget-actions">
+                                <button class="widget-btn" onclick="runJob('@job.Id', this)" title="Run now" @(isRunning ? "disabled" : "")>▶ Run</button>
+                                <button class="widget-btn" onclick="editJob('@job.Id')" title="Edit">✎ Edit</button>
+                                <button class="widget-btn danger" onclick="deleteJob('@job.Id', this)" title="Delete">✕</button>
+                            </div>
+                        </div>
+
+                        <div class="widget-body" style="padding:0.75rem 1rem">
+                            @if (!string.IsNullOrWhiteSpace(job.Description))
+                            {
+                                <p class="work-prompt-preview">@job.Description</p>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(job.Prompt))
+                            {
+                                <p class="work-prompt-preview" style="opacity:0.6">@job.Prompt</p>
+                            }
+                            <div class="work-chips">
+                                <span class="badge badge-muted">📁 @folderName</span>
+                                <span class="badge badge-muted">🤖 @agentName</span>
+                                <span class="badge badge-muted">🕐 @job.ContextDays d</span>
+                                @if (job.ScheduleHour.HasValue)
+                                {
+                                    var h = job.ScheduleHour.Value;
+                                    var timeLabel = h == 0 ? "12am" : h < 12 ? $"{h}am" : h == 12 ? "12pm" : $"{h-12}pm";
+                                    var dayLabel = job.ScheduleDay.HasValue ? System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)job.ScheduleDay.Value) + " " : "";
+                                    <span class="badge badge-muted">⏰ @(dayLabel)@timeLabel</span>
+                                }
+                                @foreach (var src in job.DataSources.Take(5))
+                                {
+                                    <span class="badge badge-muted">@src</span>
+                                }
+                                @if (job.DataSources.Count > 5)
+                                {
+                                    <span class="badge badge-muted">+@(job.DataSources.Count - 5) more</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="widget-footer">
+                            @if (lastRun != null)
+                            {
+                                <span>
+                                    <span class="status-@lastRun.Status">@lastRun.Status</span>
+                                    · @lastRun.StartedAt.ToString("MMM d, HH:mm")
+                                </span>
+                                <span style="flex:1;text-align:right;padding-left:0.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%">
+                                    @(lastRun.Summary ?? "")
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="opacity:0.5">Never run</span>
+                                <span></span>
+                            }
+                        </div>
+                    </div>
+                    <div class="work-log" id="log-@job.Id" style="display:none"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Recent Runs -->
+    @if (Model.RecentRuns.Any())
+    {
+        <div style="margin-top:0.5rem">
+            <h2 style="font-size:0.95rem;font-weight:600;margin-bottom:0.6rem;color:var(--text-muted)">Recent Runs</h2>
+            <div class="card" style="padding:0;overflow:hidden">
+                <table class="work-run-table">
+                    <thead>
+                        <tr>
+                            <th>Job</th>
+                            <th>What happened</th>
+                            <th>Started</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var run in Model.RecentRuns.Take(20))
+                        {
+                            var dur = run.CompletedAt.HasValue
+                                ? (run.CompletedAt.Value - run.StartedAt).TotalSeconds
+                                : 0;
+                            <tr data-run-id="@run.RunId">
+                                <td style="font-weight:500">@run.JobName</td>
+                                <td style="color:var(--text-muted);max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                    @(run.Summary ?? "—")
+                                </td>
+                                <td style="white-space:nowrap">@run.StartedAt.ToString("MMM d, HH:mm")</td>
+                                <td style="white-space:nowrap">@(dur > 0 ? $"{dur:F0}s" : "—")</td>
+                                <td><span class="status-@run.Status">@run.Status</span></td>
+                                <td style="width:2rem;text-align:center">
+                                    <button class="btn-icon" title="Remove" onclick="deleteRun('@run.RunId', this)">×</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+    @{
+        var nonFolderSources = Model.AllSources.Where(s => s.Type != "folder").ToList();
+        var srcNames = nonFolderSources.Select(s => s.Name).Distinct().OrderBy(n => n).ToList();
+        var srcTypes = nonFolderSources.GroupBy(s => s.Name)
+            .ToDictionary(g => g.Key, g => g.Select(s => s.Type).Distinct().OrderBy(t => t).ToList());
+    }
+    var workSources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(srcNames));
+    var workSourceTypes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(srcTypes));
+
+    var jobData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Jobs.Select(j => new {
+            j.Id, j.Name, j.DataSources, j.ContextDays, j.Prompt, j.Description, j.ScheduleHour, j.ScheduleDay, j.FolderSourceId, j.AgentId
+        }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
+    ));
+
+    var activePolls = {};
+
+    @foreach (var jobId in Model.RunningIds)
+    {
+        <text>startPolling('@jobId', null);</text>
+    }
+
+    function buildWorkSrcChips(selectedSources) {
+        selectedSources = selectedSources || [];
+        var container = document.getElementById('jf-sources');
+        if (!workSources.length) {
+            container.innerHTML = '<span class="text-sm text-muted">No data sources configured.</span>';
+            return;
+        }
+        container.innerHTML = workSources.map(function(name) {
+            var types = workSourceTypes[name] || [];
+            var selAll = selectedSources.includes(name);
+            var selTypes = selectedSources.filter(function(e) { return e.startsWith(name + ':'); }).map(function(e) { return e.slice(name.length + 1); });
+            var active = selAll || selTypes.length > 0;
+            var label = active ? (selAll ? name : name + ': ' + selTypes.join(', ')) : name;
+            var typeOptions = types.map(function(t) {
+                var checked = selAll || selTypes.includes(t);
+                return '<label class="src-mask-item" style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.75rem;cursor:pointer;font-size:0.85rem">' +
+                    '<input type="checkbox" class="src-mask-type" value="' + escHtml(t) + '"' + (checked ? ' checked' : '') + (selAll ? ' disabled' : '') + ' onchange="workSrcTypeChanged(this)"> ' + escHtml(t) +
+                    '</label>';
+            }).join('');
+            return '<div class="src-mask-wrap" data-name="' + escHtml(name) + '" style="position:relative">' +
+                '<button type="button" class="src-mask-btn secondary' + (active ? ' active' : '') + '" onclick="toggleWorkSrcMask(this)">' + escHtml(label) + '</button>' +
+                '<div class="src-mask-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:0.4rem 0;min-width:150px;margin-top:2px;box-shadow:0 4px 12px rgba(0,0,0,.2)">' +
+                '<label class="src-mask-item" style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.75rem;cursor:pointer;font-size:0.85rem;border-bottom:1px solid var(--border);margin-bottom:0.2rem">' +
+                '<input type="checkbox" class="src-mask-all"' + (selAll ? ' checked' : '') + ' onchange="workSrcAllChanged(this)"> All' +
+                '</label>' + typeOptions + '</div></div>';
+        }).join('');
+    }
+
+    function toggleWorkSrcMask(btn) {
+        var dd = btn.nextElementSibling;
+        var open = dd.style.display !== 'none';
+        document.querySelectorAll('#jf-sources .src-mask-dropdown').forEach(function(d) { d.style.display = 'none'; });
+        if (!open) dd.style.display = 'block';
+    }
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#jf-sources .src-mask-wrap')) {
+            document.querySelectorAll('#jf-sources .src-mask-dropdown').forEach(function(d) { d.style.display = 'none'; });
+        }
+    });
+    function workSrcAllChanged(cb) {
+        var wrap = cb.closest('.src-mask-wrap');
+        wrap.querySelectorAll('.src-mask-type').forEach(function(t) { t.checked = cb.checked; t.disabled = cb.checked; });
+        updateWorkSrcBtn(wrap);
+    }
+    function workSrcTypeChanged(cb) { updateWorkSrcBtn(cb.closest('.src-mask-wrap')); }
+    function updateWorkSrcBtn(wrap) {
+        var name = wrap.dataset.name;
+        var allCb = wrap.querySelector('.src-mask-all');
+        var types = Array.from(wrap.querySelectorAll('.src-mask-type:checked')).map(function(t) { return t.value; });
+        var active = allCb.checked || types.length > 0;
+        var btn = wrap.querySelector('.src-mask-btn');
+        btn.classList.toggle('active', active);
+        btn.textContent = active ? (allCb.checked ? name : name + ': ' + types.join(', ')) : name;
+    }
+    function collectWorkSrcMask() {
+        var result = [];
+        document.querySelectorAll('#jf-sources .src-mask-wrap').forEach(function(wrap) {
+            var name = wrap.dataset.name;
+            var allCb = wrap.querySelector('.src-mask-all');
+            if (allCb && allCb.checked) { result.push(name); return; }
+            wrap.querySelectorAll('.src-mask-type:checked').forEach(function(t) { result.push(name + ':' + t.value); });
+        });
+        return result;
+    }
+    function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function showJobForm(id, name, sources, days, prompt, description, scheduleHour, scheduleDay, folderId, agentId) {
+        id = id || '';
+        document.getElementById('jf-id').value = id;
+        document.getElementById('jf-name').value = name || '';
+        document.getElementById('jf-days').value = days || 7;
+        document.getElementById('jf-prompt').value = prompt || '';
+        document.getElementById('jf-description').value = description || '';
+        document.getElementById('jf-schedule-hour').value = (scheduleHour != null) ? scheduleHour : '';
+        document.getElementById('jf-schedule-day').value = (scheduleDay != null) ? scheduleDay : '';
+        document.getElementById('jf-folder').value = folderId || '';
+        document.getElementById('jf-agent').value = agentId || '';
+        buildWorkSrcChips(sources);
+        var panel = document.getElementById('job-form-panel');
+        panel.classList.add('visible');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('jf-name').focus();
+    }
+
+    function hideJobForm() { document.getElementById('job-form-panel').classList.remove('visible'); }
+
+    function editJob(id) {
+        var j = jobData.find(function(x) { return x.id === id; });
+        if (!j) return;
+        showJobForm(j.id, j.name, j.dataSources, j.contextDays, j.prompt, j.description, j.scheduleHour, j.scheduleDay, j.folderSourceId, j.agentId);
+    }
+
+    async function saveJob(andRun) {
+        var id = document.getElementById('jf-id').value;
+        var name = document.getElementById('jf-name').value.trim();
+        if (!name) { alert('Name is required'); return; }
+        var sources = collectWorkSrcMask();
+        var payload = {
+            id: id || null, name: name, dataSources: sources,
+            contextDays: parseInt(document.getElementById('jf-days').value) || 7,
+            prompt: document.getElementById('jf-prompt').value.trim(),
+            description: document.getElementById('jf-description').value.trim() || null,
+            scheduleHour: document.getElementById('jf-schedule-hour').value !== '' ? parseInt(document.getElementById('jf-schedule-hour').value) : null,
+            scheduleDay: document.getElementById('jf-schedule-day').value !== '' ? parseInt(document.getElementById('jf-schedule-day').value) : null,
+            folderSourceId: document.getElementById('jf-folder').value,
+            agentId: document.getElementById('jf-agent').value,
+        };
+        var res = await fetch('/api/work/jobs', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if (!res.ok) { alert('Save failed'); return; }
+        if (andRun) { var data = await res.json(); sessionStorage.setItem('work-autorun', data.id || id); }
+        location.reload();
+    }
+
+    async function deleteRun(runId, btn) {
+        btn.disabled = true;
+        var res = await fetch('/api/work/jobs/runs/' + runId, { method: 'DELETE' });
+        if (res.ok) {
+            var row = btn.closest('tr');
+            row.remove();
+            var tbody = document.querySelector('.work-run-table tbody');
+            if (tbody && tbody.rows.length === 0) {
+                document.querySelector('.work-run-table').closest('.card').parentElement.remove();
+            }
+        } else {
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteJob(id, btn) {
+        if (!confirm('Remove this job?')) return;
+        btn.disabled = true;
+        await fetch('/api/work/jobs/' + id, { method: 'DELETE' });
+        location.reload();
+    }
+
+    async function runJob(id, btn) {
+        btn.disabled = true;
+        var res = await fetch('/api/work/jobs/' + id + '/run', { method: 'POST' });
+        if (!res.ok) { btn.disabled = false; alert('Failed to start job'); return; }
+        var data = await res.json();
+        startPolling(id, data.runId);
+    }
+
+    function startPolling(jobId, runId) {
+        var log = document.getElementById('log-' + jobId);
+        if (!log) return;
+        log.style.display = '';
+        log.textContent = 'Starting...\n';
+        var card = log.previousElementSibling;
+        if (card) card.classList.add('log-visible');
+        if (activePolls[jobId]) clearInterval(activePolls[jobId]);
+        var currentRunId = runId;
+        var offset = 0;
+        activePolls[jobId] = setInterval(async function() {
+            try {
+                if (!currentRunId) {
+                    var rRes = await fetch('/api/work/jobs/running');
+                    var running = await rRes.json();
+                    var entry = running.find(function(r) { return r.jobId === jobId; });
+                    if (entry) currentRunId = entry.runId;
+                    if (!currentRunId) { clearInterval(activePolls[jobId]); delete activePolls[jobId]; return; }
+                }
+                var res = await fetch('/api/work/jobs/' + jobId + '/output/' + currentRunId + '?offset=' + offset);
+                if (!res.ok) { clearInterval(activePolls[jobId]); delete activePolls[jobId]; return; }
+                var data = await res.json();
+                if (data.lines && data.lines.length > 0) {
+                    log.textContent += data.lines.join('\n') + '\n';
+                    offset += data.lines.length;
+                    log.scrollTop = log.scrollHeight;
+                }
+                if (!data.running) {
+                    clearInterval(activePolls[jobId]); delete activePolls[jobId];
+                    log.textContent += '\n[Done]';
+                    if (card) card.classList.remove('log-visible');
+                }
+            } catch(e) { clearInterval(activePolls[jobId]); delete activePolls[jobId]; }
+        }, 1500);
+    }
+
+    (function() {
+        var autorun = sessionStorage.getItem('work-autorun');
+        if (autorun) {
+            sessionStorage.removeItem('work-autorun');
+            var btn = document.querySelector('[onclick="runJob(\'' + autorun + '\', this)"]');
+            if (btn) btn.click();
+        }
+    })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var el = document.getElementById('job-list');
+        if (!el || !el.children.length) return;
+        var grid = GridStack.init({
+            cellHeight: 80, column: 12,
+            handle: '.widget-drag-handle',
+            resizable: { handles: 'se,sw' },
+            animate: true, margin: 6, float: false,
+        }, el);
+        grid.on('change', function(_evt, items) {
+            if (!items || !items.length) return;
+            fetch('/api/work/jobs/grid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(items.map(function(n) {
+                    return { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h };
+                })),
+            });
+        });
+    });
+</script>

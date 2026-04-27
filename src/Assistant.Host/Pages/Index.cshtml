@@ -1,0 +1,675 @@
+@page
+@model Assistant.Host.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css" />
+<style>
+/* GridStack overrides */
+.grid-stack {
+    background: transparent;
+}
+.grid-stack-placeholder > .placeholder-content {
+    background: var(--accent-light);
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    opacity: 0.7;
+}
+.grid-stack > .grid-stack-item > .ui-resizable-se,
+.grid-stack > .grid-stack-item > .ui-resizable-sw {
+    width: 18px;
+    height: 18px;
+    bottom: 3px;
+}
+.grid-stack > .grid-stack-item > .ui-resizable-se { right: 3px; }
+.grid-stack > .grid-stack-item > .ui-resizable-sw { left: 3px; }
+
+/* Widget */
+.grid-stack-item-content {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+}
+/* widget-card, widget-header/body/footer, widget-btn — now in site.css */
+
+/* Markdown */
+.widget-md h1 { font-size: 1rem; font-weight: 700; margin: 0 0 0.5rem; }
+.widget-md h2 { font-size: 0.92rem; font-weight: 600; margin: 0.75rem 0 0.3rem; color: var(--text); }
+.widget-md h3 { font-size: 0.88rem; font-weight: 600; margin: 0.6rem 0 0.25rem; color: var(--text-muted); }
+.widget-md h4, .widget-md h5, .widget-md h6 { font-size: 0.85rem; margin: 0.5rem 0 0.2rem; color: var(--text-muted); }
+.widget-md p { margin: 0 0 0.5rem; }
+.widget-md p:last-child { margin-bottom: 0; }
+.widget-md ul, .widget-md ol { margin: 0 0 0.5rem 1.2rem; }
+.widget-md li { margin-bottom: 0.2rem; }
+.widget-md li:last-child { margin-bottom: 0; }
+.widget-md strong { color: var(--text); font-weight: 600; }
+.widget-md em { font-style: italic; color: var(--text-muted); }
+.widget-md a { color: var(--accent); text-decoration: none; }
+.widget-md a:hover { text-decoration: underline; }
+.widget-md code {
+    font-family: monospace; font-size: 0.82em;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 0.1em 0.35em;
+    color: var(--text);
+}
+.widget-md pre {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+    padding: 0.65rem 0.85rem; overflow-x: auto; margin: 0 0 0.5rem;
+}
+.widget-md pre code { background: none; border: none; padding: 0; font-size: 0.8em; }
+.widget-md blockquote {
+    border-left: 3px solid var(--accent); margin: 0 0 0.5rem;
+    padding: 0.2rem 0.75rem; color: var(--text-muted);
+}
+.widget-md hr { border: none; border-top: 1px solid var(--border); margin: 0.6rem 0; }
+.widget-md table { border-collapse: collapse; width: 100%; margin-bottom: 0.5rem; font-size: 0.85em; }
+.widget-md th, .widget-md td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
+.widget-md th { background: var(--bg); font-weight: 600; }
+
+/* Loading shimmer bar */
+@@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.widget-skeleton-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    z-index: 5;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent 0%, var(--accent) 40%, color-mix(in srgb, var(--accent) 60%, transparent) 60%, transparent 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+/* Add/edit form */
+.widget-form {
+    border: 1px dashed var(--accent);
+    border-radius: 8px;
+    padding: 1.1rem;
+    background: var(--bg-card);
+    margin-bottom: 1rem;
+}
+
+/* Page tabs */
+.dash-tabs {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+}
+.dash-tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 0.45rem 1rem; font-size: 0.88rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; margin-bottom: -1px;
+    display: flex; align-items: center; gap: 0.3rem;
+}
+.dash-tab:hover { color: var(--text); background: none; }
+.dash-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.dash-tab-del {
+    font-size: 0.72rem; opacity: 0; color: var(--text-muted);
+    line-height: 1; padding: 0.1rem; border-radius: 2px;
+    transition: opacity 0.1s;
+}
+.dash-tab:hover .dash-tab-del { opacity: 0.5; }
+.dash-tab-del:hover { opacity: 1 !important; color: var(--danger); }
+.dash-tab-add {
+    color: var(--text-muted); font-size: 1.1rem; font-weight: 400;
+    padding: 0.3rem 0.7rem; margin-left: 0.1rem;
+}
+.dash-page { display: none; }
+.dash-page.active { display: block; }
+.dash-tab.drop-target {
+    border-bottom-color: var(--accent); color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-radius: 4px 4px 0 0;
+}
+</style>
+
+<div style="position:fixed; top:3.75rem; right:1.25rem; z-index:100; display:flex; gap:0.4rem">
+    <button id="refresh-all-btn" onclick="refreshAllWidgets()" class="secondary" style="padding:0.35rem 0.85rem; font-size:0.82rem">↻ Refresh All</button>
+    <button onclick="showWidgetForm()" style="padding:0.35rem 0.85rem; font-size:0.82rem">+ Add Widget</button>
+</div>
+
+<div class="dash-tabs" id="dash-tabs">
+    <button class="dash-tab" data-page-id="" ondblclick="renamePage(event, this)"><span class="dash-tab-name">@Model.HomeName</span></button>
+    @foreach (var pg in Model.Pages)
+    {
+        <button class="dash-tab" data-page-id="@pg.Id" ondblclick="renamePage(event, this)">
+            <span class="dash-tab-name">@pg.Name</span>
+            <span class="dash-tab-del" onclick="deletePage(event, '@pg.Id')" title="Delete">×</span>
+        </button>
+    }
+    <button class="dash-tab dash-tab-add" onclick="addPage()" title="Add page">+</button>
+</div>
+
+<div id="widget-form-container"></div>
+
+@{
+    var allPageIds = new[] { "" }.Concat(Model.Pages.Select(p => p.Id));
+}
+@foreach (var pageId in allPageIds)
+{
+    var pageWidgets = Model.Widgets.Where(w => w.Widget.PageId == pageId).ToList();
+    var isEmpty = !pageWidgets.Any();
+    <div class="dash-page" data-page-id="@pageId" id="dash-page-@(pageId == "" ? "home" : pageId)">
+        @if (isEmpty)
+        {
+            <div class="card" style="text-align:center; padding:3rem; color:var(--text-muted)">
+                <div style="font-size:0.9rem">No widgets on this page — click <strong>+ Add Widget</strong> to add one.</div>
+            </div>
+        }
+        <div class="grid-stack" data-page-id="@pageId">
+            @foreach (var item in pageWidgets)
+            {
+                var gw = (item.Widget.GridW ?? 4).ToString();
+                var gh = (item.Widget.GridH ?? 4).ToString();
+                var hasPos = item.Widget.GridX.HasValue;
+                <div class="grid-stack-item" id="wi-@item.Widget.Id" gs-id="@item.Widget.Id"
+                     @Html.Raw(hasPos ? $"gs-x=\"{item.Widget.GridX}\" gs-y=\"{item.Widget.GridY}\"" : "gs-auto-position=\"true\"")
+                     gs-w="@gw" gs-h="@gh">
+                    <div class="grid-stack-item-content">
+                        <div class="widget-card @(item.Widget.HideHeader ? "header-hidden" : "") @(item.Widget.HideFooter ? "footer-hidden" : "")">
+                            <div class="widget-header"@Html.Raw(item.Widget.Color != null ? $" style=\"background:{item.Widget.Color}\"" : "")>
+                                <span class="widget-drag-handle" title="Drag to move">⠿</span>
+                                <span class="widget-title">@item.Widget.Title</span>
+                                <div class="widget-actions">
+                                    <button class="widget-btn" title="Refresh" onclick="refreshWidget('@item.Widget.Id', this)">↻</button>
+                                    <button class="widget-btn" title="View context" onclick="viewWidgetContext('@item.Widget.Id')">⊞</button>
+                                    <button class="widget-btn"
+                                        data-wid="@item.Widget.Id"
+                                        data-wtitle="@item.Widget.Title"
+                                        data-wprompt="@item.Widget.Prompt"
+                                        data-wtier="@item.Widget.AgentTier"
+                                        data-wfmt="@item.Widget.OutputFormat"
+                                        data-wsources="@string.Join(',', item.Widget.DataSources)"
+                                        data-wcolor="@(item.Widget.Color ?? "")"
+                                        data-whide="@(item.Widget.HideHeader ? "1" : "0")"
+                                        data-wfooterhide="@(item.Widget.HideFooter ? "1" : "0")"
+                                        data-wpageid="@item.Widget.PageId"
+                                        data-wcontextdays="@item.Widget.ContextDays"
+                                        onclick="editWidget(this)">Edit</button>
+                                    <button class="widget-btn danger" onclick="deleteWidget('@item.Widget.Id')">✕</button>
+                                </div>
+                            </div>
+                            <div class="widget-body" id="widget-body-@item.Widget.Id" data-format="@item.Widget.OutputFormat">
+                                @if (!string.IsNullOrEmpty(item.Content))
+                                {
+                                    @if (item.Widget.OutputFormat == "html")
+                                    {
+                                        <iframe srcdoc="@item.Content" sandbox="allow-scripts"
+                                            style="width:100%;height:100%;border:none;display:block"
+                                            scrolling="auto"></iframe>
+                                    }
+                                    else if (item.Widget.OutputFormat == "text")
+                                    {
+                                        <pre style="white-space:pre-wrap; font-family:inherit; margin:0">@item.Content</pre>
+                                    }
+                                    else
+                                    {
+                                        <div class="widget-md md-content" data-markdown="@Html.Raw(System.Web.HttpUtility.HtmlAttributeEncode(item.Content))"></div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="color:var(--text-muted)">No result yet — click ↻ to run.</span>
+                                }
+                            </div>
+                            <div class="widget-footer" id="widget-footer-@item.Widget.Id">
+                                <span>
+                                    @if (item.CachedAt.HasValue) { @TimeAgo(item.CachedAt.Value) } else { <text>—</text> }
+                                </span>
+                                <span>
+                                    @if (item.Widget.DataSources.Any())
+                                    {
+                                        <span style="color:var(--accent); margin-right:0.4rem">@string.Join(", ", item.Widget.DataSources)</span>
+                                    }
+                                    <span style="text-transform:uppercase; letter-spacing:.04em">@item.Widget.AgentTier</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js"></script>
+<script>
+marked.use({ breaks: true, gfm: true });
+
+function showWidgetSkeleton(body) {
+    if (body.querySelector('.widget-skeleton-overlay')) return;
+    const bar = document.createElement('div');
+    bar.className = 'widget-skeleton-overlay';
+    body.appendChild(bar);
+}
+
+const availableSources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableSources));
+const availableSourceTypes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableSourceTypes));
+const dashPages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    new[] { new { id = "", name = Model.HomeName } }
+    .Concat(Model.Pages.Select(p => new { id = p.Id, name = p.Name }))
+    .ToArray()));
+const gsGrids = {};
+let currentPageId = '';
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.md-content[data-markdown]').forEach(el => {
+        el.innerHTML = marked.parse(el.dataset.markdown);
+        el.removeAttribute('data-markdown');
+    });
+
+    const gsOpts = {
+        cellHeight: 80, column: 12, handle: '.widget-drag-handle',
+        resizable: { handles: 'se,sw' }, animate: true, margin: 6, float: false,
+    };
+    document.querySelectorAll('.grid-stack').forEach(el => {
+        const pid = el.dataset.pageId;
+        const g = GridStack.init(gsOpts, el);
+        g.on('change', (_evt, items) => {
+            if (!items?.length) return;
+            fetch('/api/dashboard/widgets/grid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(items.map(n => ({ id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }))),
+            });
+        });
+        gsGrids[pid] = g;
+    });
+
+    // Drag widget onto a tab to move it to that page
+    let dragWidgetId = null;
+    let lastPointer = { x: 0, y: 0 };
+    document.addEventListener('pointermove', e => { lastPointer = { x: e.clientX, y: e.clientY }; });
+
+    Object.values(gsGrids).forEach(g => {
+        g.on('dragstart', (_e, el) => {
+            dragWidgetId = el.getAttribute('gs-id');
+            document.querySelectorAll('.dash-tab[data-page-id]').forEach(t => {
+                if (t.dataset.pageId !== currentPageId) t.classList.add('drop-target');
+            });
+        });
+        g.on('dragstop', async (_e, el) => {
+            const wid = dragWidgetId;
+            dragWidgetId = null;
+            const tabs = document.querySelectorAll('.dash-tab[data-page-id]');
+            tabs.forEach(t => t.classList.remove('drop-target'));
+            const hit = document.elementFromPoint(lastPointer.x, lastPointer.y)?.closest('.dash-tab[data-page-id]');
+            if (hit && hit.dataset.pageId !== currentPageId && wid) {
+                await fetch(`/api/dashboard/widgets/${wid}/move`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pageId: hit.dataset.pageId }),
+                });
+                location.hash = encodeURIComponent(hit.dataset.pageId);
+                location.reload();
+            }
+        });
+    });
+
+    const hash = location.hash ? decodeURIComponent(location.hash.slice(1)) : '';
+    switchPage(hash || '');
+});
+
+function switchPage(pageId) {
+    currentPageId = pageId;
+    document.querySelectorAll('.dash-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.pageId === pageId));
+    document.querySelectorAll('.dash-page').forEach(p =>
+        p.classList.toggle('active', p.dataset.pageId === pageId));
+    history.replaceState(null, '', pageId ? '#' + encodeURIComponent(pageId) : location.pathname);
+}
+
+async function addPage() {
+    const name = prompt('Page name:');
+    if (!name?.trim()) return;
+    const resp = await fetch('/api/dashboard/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+    });
+    if (resp.ok) {
+        const { id } = await resp.json();
+        location.hash = encodeURIComponent(id);
+        location.reload();
+    }
+}
+
+async function renamePage(e, tab) {
+    e.preventDefault();
+    const id = tab.dataset.pageId;
+    const nameEl = tab.querySelector('.dash-tab-name') || tab;
+    const current = nameEl.textContent.trim();
+    const name = prompt('Rename:', current);
+    if (!name?.trim() || name.trim() === current) return;
+    const url = id ? `/api/dashboard/pages/${id}` : '/api/dashboard/home-name';
+    await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+    });
+    location.reload();
+}
+
+async function deletePage(e, id) {
+    e.stopPropagation();
+    if (!confirm('Delete this page? Its widgets will move to Home.')) return;
+    await fetch(`/api/dashboard/pages/${id}`, { method: 'DELETE' });
+    location.reload();
+}
+
+document.getElementById('dash-tabs')?.addEventListener('click', e => {
+    const tab = e.target.closest('.dash-tab[data-page-id]');
+    if (tab && !e.target.classList.contains('dash-tab-del') && !e.target.classList.contains('dash-tab-add'))
+        switchPage(tab.dataset.pageId);
+});
+
+function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function editWidget(btn) {
+    const d = btn.dataset;
+    showWidgetForm(d.wid, d.wtitle, d.wprompt, d.wtier, d.wfmt,
+        d.wsources ? d.wsources.split(',').filter(Boolean) : [],
+        d.wcolor || '', d.whide === '1', d.wfooterhide === '1', d.wpageid ?? '',
+        parseInt(d.wcontextdays || '7'));
+}
+
+function showWidgetForm(id, title, prompt, tier, fmt, selectedSources, color, hideHeader, hideFooter, _pageId, contextDays) {
+    selectedSources = selectedSources || [];
+    color = color || '';
+    hideHeader = !!hideHeader;
+    hideFooter = !!hideFooter;
+    const editing = !!id;
+    // Build Unity-style layer mask per source
+    const sourcesHtml = availableSources.length ? `
+        <div class="mb-2">
+            <label class="text-sm text-muted">Data sources</label>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.3rem">
+                ${availableSources.map(name => {
+                    const types = availableSourceTypes[name] || [];
+                    // selectedSources entries are "Name" (all) or "Name:Type"
+                    const selAll = selectedSources.includes(name);
+                    const selTypes = selectedSources.filter(e => e.startsWith(name+':')).map(e => e.slice(name.length+1));
+                    const active = selAll || selTypes.length > 0;
+                    const label = active
+                        ? (selAll ? name : `${name}: ${selTypes.join(', ')}`)
+                        : name;
+                    return `<div class="src-mask-wrap" data-name="${esc(name)}" style="position:relative">
+                        <button type="button" class="src-mask-btn ${active?'active':''}" onclick="toggleSrcMask(this)">${esc(label)}</button>
+                        <div class="src-mask-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:0.4rem 0;min-width:150px;margin-top:2px;box-shadow:0 4px 12px rgba(0,0,0,.2)">
+                            <label class="src-mask-item" style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.75rem;cursor:pointer;font-size:0.85rem;border-bottom:1px solid var(--border);margin-bottom:0.2rem">
+                                <input type="checkbox" class="src-mask-all" ${selAll||selTypes.length===0&&!active?'':''}
+                                    ${selAll?'checked':''} onchange="srcMaskAllChanged(this)"> All
+                            </label>
+                            ${types.map(t => `
+                            <label class="src-mask-item" style="display:flex;align-items:center;gap:0.4rem;padding:0.25rem 0.75rem;cursor:pointer;font-size:0.85rem">
+                                <input type="checkbox" class="src-mask-type" value="${esc(t)}"
+                                    ${selAll||selTypes.includes(t)?'checked':''}
+                                    ${selAll?'disabled':''} onchange="srcMaskTypeChanged(this)"> ${esc(t)}
+                            </label>`).join('')}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+    const container = document.getElementById('widget-form-container');
+    container.innerHTML = `
+        <div class="widget-form">
+            <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.9rem">${editing ? 'Edit Widget' : 'New Widget'}</div>
+            <input type="hidden" id="form-id" value="${id || ''}" />
+            <div class="mb-2">
+                <label class="text-sm text-muted">Title</label>
+                <input type="text" id="form-title" value="${esc(title || '')}" placeholder="e.g. Team pulse" />
+            </div>
+            <div class="mb-2">
+                <label class="text-sm text-muted">Prompt</label>
+                <textarea id="form-prompt" rows="3" placeholder="e.g. What should I be paying attention to with my team today?">${esc(prompt || '')}</textarea>
+            </div>
+            ${sourcesHtml}
+            <div style="display:flex;gap:1rem;margin-bottom:0.75rem">
+                <div style="flex:1">
+                    <label class="text-sm text-muted">Agent</label>
+                    <select id="form-tier" style="width:100%">
+                        <option value="light" ${tier==='light'?'selected':''}>Light</option>
+                        <option value="medium" ${tier==='medium'||!tier?'selected':''}>Medium</option>
+                        <option value="heavy" ${tier==='heavy'?'selected':''}>Heavy</option>
+                    </select>
+                </div>
+                <div style="flex:1">
+                    <label class="text-sm text-muted">Output format</label>
+                    <select id="form-fmt" style="width:100%">
+                        <option value="markdown" ${!fmt||fmt==='markdown'?'selected':''}>Markdown</option>
+                        <option value="text" ${fmt==='text'?'selected':''}>Plain text</option>
+                        <option value="html" ${fmt==='html'?'selected':''}>HTML / SVG</option>
+                    </select>
+                </div>
+                <div style="flex:1">
+                    <label class="text-sm text-muted">Context window</label>
+                    <select id="form-context-days" style="width:100%">
+                        <option value="1" ${contextDays===1?'selected':''}>Today only</option>
+                        <option value="7" ${!contextDays||contextDays===7?'selected':''}>7 days</option>
+                        <option value="14" ${contextDays===14?'selected':''}>14 days</option>
+                        <option value="30" ${contextDays===30?'selected':''}>30 days</option>
+                        <option value="90" ${contextDays===90?'selected':''}>90 days</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:0.75rem">
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                    <label class="text-sm text-muted" style="margin:0">Header color</label>
+                    <input type="color" id="form-color" value="${color || '#1e293b'}"
+                        oninput="document.getElementById('form-color-clear').value='0'"
+                        style="width:2rem;height:2rem;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px;background:none" />
+                    <button type="button" class="secondary" style="font-size:0.75rem;padding:0.15rem 0.45rem"
+                        onclick="document.getElementById('form-color').value='';document.getElementById('form-color-clear').value='1'">Clear</button>
+                    <input type="hidden" id="form-color-clear" value="${color ? '0' : '1'}" />
+                </div>
+                <label style="font-size:0.85rem;display:flex;align-items:center;gap:0.35rem;cursor:pointer">
+                    <input type="checkbox" id="form-hide-header" ${hideHeader?'checked':''} style="width:auto">
+                    Hide header
+                </label>
+                <label style="font-size:0.85rem;display:flex;align-items:center;gap:0.35rem;cursor:pointer">
+                    <input type="checkbox" id="form-hide-footer" ${hideFooter?'checked':''} style="width:auto">
+                    Hide footer
+                </label>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="saveWidget()">Save</button>
+                <button class="secondary" onclick="document.getElementById('widget-form-container').innerHTML=''">Cancel</button>
+            </div>
+        </div>`;
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function toggleSrcMask(btn) {
+    const dd = btn.nextElementSibling;
+    const open = dd.style.display !== 'none';
+    document.querySelectorAll('.src-mask-dropdown').forEach(d => d.style.display = 'none');
+    if (!open) dd.style.display = 'block';
+}
+document.addEventListener('click', e => {
+    if (!e.target.closest('.src-mask-wrap')) {
+        document.querySelectorAll('.src-mask-dropdown').forEach(d => d.style.display = 'none');
+    }
+});
+function srcMaskAllChanged(cb) {
+    const wrap = cb.closest('.src-mask-wrap');
+    wrap.querySelectorAll('.src-mask-type').forEach(t => {
+        t.checked = cb.checked;
+        t.disabled = cb.checked;
+    });
+    updateSrcMaskBtn(wrap);
+}
+function srcMaskTypeChanged(cb) {
+    updateSrcMaskBtn(cb.closest('.src-mask-wrap'));
+}
+function updateSrcMaskBtn(wrap) {
+    const name = wrap.dataset.name;
+    const allCb = wrap.querySelector('.src-mask-all');
+    const types = [...wrap.querySelectorAll('.src-mask-type:checked')].map(t => t.value);
+    const allTypes = [...wrap.querySelectorAll('.src-mask-type')].map(t => t.value);
+    const active = allCb.checked || types.length > 0;
+    const btn = wrap.querySelector('.src-mask-btn');
+    btn.classList.toggle('active', active);
+    btn.textContent = active
+        ? (allCb.checked ? name : `${name}: ${types.join(', ')}`)
+        : name;
+}
+function collectSrcMask() {
+    const result = [];
+    document.querySelectorAll('.src-mask-wrap').forEach(wrap => {
+        const name = wrap.dataset.name;
+        const allCb = wrap.querySelector('.src-mask-all');
+        if (allCb?.checked) { result.push(name); return; }
+        wrap.querySelectorAll('.src-mask-type:checked').forEach(t => result.push(`${name}:${t.value}`));
+    });
+    return result;
+}
+
+async function saveWidget() {
+    const id = document.getElementById('form-id').value;
+    const title = document.getElementById('form-title').value.trim();
+    const prompt = document.getElementById('form-prompt').value.trim();
+    const tier = document.getElementById('form-tier').value;
+    const fmt = document.getElementById('form-fmt').value;
+    const sources = collectSrcMask();
+    const cleared = document.getElementById('form-color-clear')?.value === '1';
+    const color = cleared ? '' : (document.getElementById('form-color')?.value || '');
+    const hideHeader = document.getElementById('form-hide-header')?.checked ?? false;
+    const hideFooter = document.getElementById('form-hide-footer')?.checked ?? false;
+    const contextDays = parseInt(document.getElementById('form-context-days')?.value || '7');
+    if (!title || !prompt) return;
+
+    const resp = await fetch('/api/dashboard/widgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id || undefined, pageId: id ? undefined : currentPageId,
+            title, prompt, agentTier: tier, outputFormat: fmt,
+            dataSources: sources, color: color || null, hideHeader, hideFooter, contextDays })
+    });
+    if (resp.ok) location.reload();
+}
+
+async function deleteWidget(id) {
+    if (!confirm('Delete this widget?')) return;
+    await fetch(`/api/dashboard/widgets/${id}`, { method: 'DELETE' });
+    const el = document.getElementById(`wi-${id}`);
+    if (el) {
+        const grid = gsGrids[el.closest('.grid-stack')?.dataset.pageId ?? ''];
+        grid?.removeWidget(el);
+    }
+}
+
+async function refreshAllWidgets() {
+    const btn = document.getElementById('refresh-all-btn');
+    btn.disabled = true;
+    btn.textContent = '↻ Refreshing…';
+    const page = document.querySelector('.dash-page.active') ?? document;
+    const bodies = [...page.querySelectorAll('[id^="widget-body-"]')];
+    bodies.forEach(el => showWidgetSkeleton(el));
+    await Promise.all(bodies.map(el => refreshWidget(el.id.replace('widget-body-', ''), null)));
+    btn.disabled = false;
+    btn.textContent = '↻ Refresh All';
+}
+
+async function viewWidgetContext(id) {
+    const res = await fetch(`/api/dashboard/widgets/${id}/context`);
+    if (!res.ok) { alert('No context saved yet — run the widget first.'); return; }
+    const text = await res.text();
+
+    // Parse sections by <!--SECTION:Name--> markers (collision-proof — never appears in data content)
+    const sections = {};
+    const headingRe = /^<!--SECTION:(.+)-->$/gm;
+    let lastKey = null, lastIdx = 0, hm;
+    while ((hm = headingRe.exec(text)) !== null) {
+        if (lastKey !== null) sections[lastKey] = text.slice(lastIdx, hm.index).trim();
+        lastKey = hm[1].trim();
+        lastIdx = hm.index + hm[0].length + 1;
+    }
+    if (lastKey !== null) sections[lastKey] = text.slice(lastIdx).trim();
+
+    const hasTools = 'Tool Calls' in sections;
+    const promptMd = [sections['System Prompt'] ? `## System Prompt\n\n${sections['System Prompt']}` : '',
+                      sections['Prompt'] ? `## Prompt\n\n${sections['Prompt']}` : '',
+                      sections['User Prompt'] ? `## User Prompt\n\n${sections['User Prompt']}` : '']
+                     .filter(Boolean).join('\n\n---\n\n');
+    const toolsMd = sections['Tool Calls']?.trim() ? sections['Tool Calls'] : '_No tools were called._';
+
+    const tabStyle = (active) => `cursor:pointer;padding:.4rem .9rem;font-size:.85rem;font-weight:500;border:none;background:none;border-bottom:2px solid ${active?'var(--accent)':'transparent'};color:${active?'var(--text)':'var(--text-muted)'};margin-bottom:-1px`;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:90vw;max-width:900px;height:85vh;display:flex;flex-direction:column;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;border-bottom:1px solid var(--border);flex-shrink:0">
+                <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:-1px;padding-bottom:0">
+                    <button id="ctx-tab-prompt" style="${tabStyle(true)}" onclick="ctxTab('prompt')">Prompt</button>
+                    ${hasTools ? `<button id="ctx-tab-tools" style="${tabStyle(false)}" onclick="ctxTab('tools')">Tool Calls</button>` : ''}
+                </div>
+                <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted);margin-left:1rem">✕</button>
+            </div>
+            <div id="ctx-body" style="flex:1;overflow:auto;padding:1rem" class="widget-md"></div>
+        </div>`;
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    window._ctxTabs = { prompt: promptMd, tools: toolsMd };
+    window.ctxTab = (tab) => {
+        document.getElementById('ctx-body').innerHTML = marked.parse(window._ctxTabs[tab] || '');
+        ['prompt','tools'].forEach(t => {
+            const btn = document.getElementById('ctx-tab-' + t);
+            if (btn) btn.style.cssText = tabStyle(t === tab);
+        });
+    };
+    window.ctxTab('prompt');
+
+    document.addEventListener('keydown', function escCtx(e) {
+        if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escCtx); }
+    });
+}
+
+async function refreshWidget(id, btn) {
+    const body = document.getElementById(`widget-body-${id}`);
+    const footer = document.getElementById(`widget-footer-${id}`);
+    const origText = btn?.textContent;
+    if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
+    showWidgetSkeleton(body);
+
+    const resp = await fetch(`/api/dashboard/widgets/${id}/run`, { method: 'POST' });
+
+    if (resp.ok) {
+        const data = await resp.json();
+        const fmt = data.outputFormat || body.dataset.format || 'markdown';
+        if (fmt === 'html') {
+            body.innerHTML = `<iframe srcdoc="${esc(data.content)}" sandbox="allow-scripts" style="width:100%;height:100%;border:none;display:block" scrolling="auto"></iframe>`;
+        } else if (fmt === 'text') {
+            body.innerHTML = `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${esc(data.content)}</pre>`;
+        } else {
+            body.innerHTML = `<div class="widget-md">${marked.parse(data.content)}</div>`;
+        }
+        footer.innerHTML = `<span>just now</span><span style="text-transform:uppercase;letter-spacing:.04em">${data.agentTier}</span>`;
+    } else {
+        body.innerHTML = '<span style="color:var(--danger)">Failed to run.</span>';
+    }
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+}
+</script>
+
+@functions {
+    string TimeAgo(DateTimeOffset updated)
+    {
+        var diff = DateTimeOffset.UtcNow - updated;
+        if (diff.TotalMinutes < 2) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return $"{(int)diff.TotalDays}d ago";
+    }
+}

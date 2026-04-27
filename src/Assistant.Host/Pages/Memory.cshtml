@@ -1,0 +1,286 @@
+@page
+@model Assistant.Host.Pages.MemoryModel
+@{
+    ViewData["Title"] = "Memory";
+    var instances = Model.GetAllInstances();
+}
+
+<div class="flex justify-between items-center mb-3">
+    <h1 style="margin:0">🧠 Memory</h1>
+    @if (instances.Count > 1)
+    {
+        <select onchange="window.location='/Memory?source='+encodeURIComponent(this.value)+'&tab=@Model.ActiveTab'" style="width:auto">
+            @foreach (var inst in instances)
+            {
+                <option value="@inst.Name" selected="@(inst.Name == Model.SourceName)">@inst.Name</option>
+            }
+        </select>
+    }
+</div>
+
+@if (Model.SourceName == null)
+{
+    <div class="card" style="text-align:center; padding:3rem">
+        <h2>No memory configured</h2>
+        <p class="text-muted mt-1">
+            Add a CIMA Memory data source in <a href="/DataSources">Data Sources</a> to get started.
+        </p>
+    </div>
+}
+else
+{
+    <!-- Stats row -->
+    <div class="flex gap-2 mb-3" style="flex-wrap:wrap">
+        <div class="card" style="flex:1; min-width:120px; text-align:center; padding:1rem">
+            <div style="font-size:1.6rem; font-weight:700">@Model.EpisodeTotal</div>
+            <div class="text-sm text-muted">Episodes</div>
+            @if (Model.EpisodeTotal > 0)
+            {
+                <div class="text-sm text-muted">avg importance @Model.AvgImportance</div>
+            }
+        </div>
+        <div class="card" style="flex:1; min-width:120px; text-align:center; padding:1rem">
+            <div style="font-size:1.6rem; font-weight:700">@Model.FactTotal</div>
+            <div class="text-sm text-muted">Facts</div>
+            @if (Model.FactTotal > 0)
+            {
+                <div class="text-sm text-muted">avg confidence @Model.AvgConfidence</div>
+            }
+        </div>
+        <div class="card" style="flex:1; min-width:120px; text-align:center; padding:1rem">
+            <div style="font-size:1.6rem; font-weight:700">@Model.SkillTotal</div>
+            <div class="text-sm text-muted">Skills</div>
+        </div>
+        <div class="card" style="flex:1; min-width:120px; text-align:center; padding:1rem">
+            <div style="font-size:1.6rem; font-weight:700">@Model.CueTotal</div>
+            <div class="text-sm text-muted">Cues</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-3" style="border-bottom:1px solid var(--border)">
+        @foreach (var (tab, label, count) in new[] {
+            ("episodes", "Episodes", Model.EpisodeTotal),
+            ("facts", "Facts", Model.FactTotal),
+            ("skills", "Skills", Model.SkillTotal),
+            ("cues", "Cues", Model.CueTotal),
+        })
+        {
+            var active = Model.ActiveTab == tab;
+            <a href="/Memory?tab=@tab@(Model.SourceName != null ? "&source=" + Uri.EscapeDataString(Model.SourceName) : "")"
+               style="padding:0.5rem 1rem; text-decoration:none; border-bottom:2px solid @(active ? "var(--accent)" : "transparent");
+                      color:@(active ? "var(--accent)" : "var(--text-muted)"); font-weight:@(active ? "600" : "400")">
+                @label <span class="badge">@count</span>
+            </a>
+        }
+    </div>
+
+    <!-- Episodes -->
+    @if (Model.ActiveTab == "episodes")
+    {
+        if (!Model.Episodes.Any())
+        {
+            <p class="text-muted">No episodes recorded yet.</p>
+        }
+        else
+        {
+            <div class="card" style="padding:0; overflow:hidden">
+                <table style="width:100%; border-collapse:collapse; font-size:0.875rem">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); background:var(--surface-2,#f8f8f8)">
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Narrative</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600; width:8rem">Entities</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:6rem">Outcome</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:5rem">Importance</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:right; font-weight:600; width:7rem">Recorded</th>
+                            <th style="width:2.5rem"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ep in Model.Episodes)
+                        {
+                            <tr style="border-bottom:1px solid var(--border)">
+                                <td style="padding:0.6rem 0.75rem">@ep.Narrative</td>
+                                <td style="padding:0.6rem 0.75rem; color:var(--text-muted)">
+                                    @string.Join(", ", ep.Entities.Take(4))
+                                    @if (ep.Entities.Count > 4) { <span>+@(ep.Entities.Count - 4)</span> }
+                                </td>
+                                <td style="padding:0.6rem 0.75rem; text-align:center">
+                                    <span class="pill @(ep.Outcome == "success" ? "pill-success" : ep.Outcome == "failure" ? "pill-danger" : "pill-neutral")">
+                                        @ep.Outcome
+                                    </span>
+                                </td>
+                                <td style="padding:0.6rem 0.75rem; text-align:center">
+                                    <span style="display:inline-block; width:@((int)(ep.Importance * 60))px; height:6px; background:var(--accent); border-radius:3px; vertical-align:middle"></span>
+                                    <span class="text-muted" style="font-size:0.8rem"> @ep.Importance.ToString("F1")</span>
+                                </td>
+                                <td style="padding:0.6rem 0.75rem; text-align:right; color:var(--text-muted)">
+                                    @MemoryModel.FormatTimestamp(ep.Timestamp)
+                                </td>
+                                <td style="padding:0.25rem 0.5rem">
+                                    <form method="post" asp-page-handler="DeleteEpisode" style="margin:0">
+                                        <input type="hidden" name="id" value="@ep.Id" />
+                                        <input type="hidden" name="source" value="@Model.SourceName" />
+                                        <input type="hidden" name="tab" value="episodes" />
+                                        <button type="submit" class="btn-danger btn" style="font-size:0.75rem; padding:0.2rem 0.5rem"
+                                                onclick="return confirm('Delete this episode?')">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    <!-- Facts -->
+    @if (Model.ActiveTab == "facts")
+    {
+        if (!Model.Facts.Any())
+        {
+            <p class="text-muted">No facts recorded yet.</p>
+        }
+        else
+        {
+            <div class="card" style="padding:0; overflow:hidden">
+                <table style="width:100%; border-collapse:collapse; font-size:0.875rem">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); background:var(--surface-2,#f8f8f8)">
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Subject</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Relation</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Object</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:6rem">Confidence</th>
+                            <th style="width:2.5rem"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in Model.Facts)
+                        {
+                            <tr style="border-bottom:1px solid var(--border)">
+                                <td style="padding:0.6rem 0.75rem; font-weight:500">@f.Subject</td>
+                                <td style="padding:0.6rem 0.75rem; color:var(--text-muted); font-style:italic">@f.Relation</td>
+                                <td style="padding:0.6rem 0.75rem">@f.Obj</td>
+                                <td style="padding:0.6rem 0.75rem; text-align:center">
+                                    <span style="display:inline-block; width:@((int)(f.Confidence * 50))px; height:6px;
+                                                 background:color-mix(in srgb, var(--accent) @((int)(f.Confidence*100))%, var(--danger));
+                                                 border-radius:3px; vertical-align:middle"></span>
+                                    <span class="text-muted" style="font-size:0.8rem"> @f.Confidence.ToString("F2")</span>
+                                </td>
+                                <td style="padding:0.25rem 0.5rem">
+                                    <form method="post" asp-page-handler="DeleteFact" style="margin:0">
+                                        <input type="hidden" name="subject" value="@f.Subject" />
+                                        <input type="hidden" name="relation" value="@f.Relation" />
+                                        <input type="hidden" name="obj" value="@f.Obj" />
+                                        <input type="hidden" name="source" value="@Model.SourceName" />
+                                        <input type="hidden" name="tab" value="facts" />
+                                        <button type="submit" class="btn-danger btn" style="font-size:0.75rem; padding:0.2rem 0.5rem">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    <!-- Skills -->
+    @if (Model.ActiveTab == "skills")
+    {
+        if (!Model.Skills.Any())
+        {
+            <p class="text-muted">No skills registered yet. Skills are learned automatically via the sleep cycle or by calling <code>cima_learn_skill</code>.</p>
+        }
+        else
+        {
+            <div class="card" style="padding:0; overflow:hidden">
+                <table style="width:100%; border-collapse:collapse; font-size:0.875rem">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); background:var(--surface-2,#f8f8f8)">
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Trigger</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Template</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:5rem">Fires</th>
+                            <th style="width:2.5rem"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.Skills)
+                        {
+                            <tr style="border-bottom:1px solid var(--border)">
+                                <td style="padding:0.6rem 0.75rem; font-weight:500; color:var(--accent)">@s.Trigger</td>
+                                <td style="padding:0.6rem 0.75rem">@s.Template</td>
+                                <td style="padding:0.6rem 0.75rem; text-align:center; color:var(--text-muted)">@s.FireCount</td>
+                                <td style="padding:0.25rem 0.5rem">
+                                    <form method="post" asp-page-handler="DeleteSkill" style="margin:0">
+                                        <input type="hidden" name="trigger" value="@s.Trigger" />
+                                        <input type="hidden" name="source" value="@Model.SourceName" />
+                                        <input type="hidden" name="tab" value="skills" />
+                                        <button type="submit" class="btn-danger btn" style="font-size:0.75rem; padding:0.2rem 0.5rem">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    <!-- Cues -->
+    @if (Model.ActiveTab == "cues")
+    {
+        if (!Model.Cues.Any())
+        {
+            <p class="text-muted">No prospective cues registered yet. Cues fire when matching context appears.</p>
+        }
+        else
+        {
+            <div class="card" style="padding:0; overflow:hidden">
+                <table style="width:100%; border-collapse:collapse; font-size:0.875rem">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); background:var(--surface-2,#f8f8f8)">
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Predicate</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600">Action</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:5rem">Active</th>
+                            <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:5rem">Fires</th>
+                            <th style="width:2.5rem"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Cues)
+                        {
+                            <tr style="border-bottom:1px solid var(--border)">
+                                <td style="padding:0.6rem 0.75rem; font-weight:500; color:var(--accent)">@c.Predicate</td>
+                                <td style="padding:0.6rem 0.75rem">@c.Action</td>
+                                <td style="padding:0.6rem 0.75rem; text-align:center">
+                                    @if (c.Active)
+                                    {
+                                        <span style="color:var(--success)">●</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--text-muted)">○</span>
+                                    }
+                                </td>
+                                <td style="padding:0.6rem 0.75rem; text-align:center; color:var(--text-muted)">@c.FireCount</td>
+                                <td style="padding:0.25rem 0.5rem">
+                                    <form method="post" asp-page-handler="DeleteCue" style="margin:0">
+                                        <input type="hidden" name="predicate" value="@c.Predicate" />
+                                        <input type="hidden" name="source" value="@Model.SourceName" />
+                                        <input type="hidden" name="tab" value="cues" />
+                                        <button type="submit" class="btn-danger btn" style="font-size:0.75rem; padding:0.2rem 0.5rem">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+
+    <p class="text-muted mt-3" style="font-size:0.8rem">
+        Store: <code>@Model.StorePath</code>
+    </p>
+}
