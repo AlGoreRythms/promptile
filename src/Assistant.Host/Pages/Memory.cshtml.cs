@@ -1,6 +1,6 @@
-using Cima;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Assistant.Host.Services;
 using Assistant.Sdk;
 
 namespace Assistant.Host.Pages;
@@ -8,95 +8,162 @@ namespace Assistant.Host.Pages;
 [IgnoreAntiforgeryToken]
 public class MemoryModel : PageModel
 {
-    private readonly IDataSourceManager _manager;
+    private readonly MemoryService _memory;
+    private readonly SettingsService _settings;
+    private readonly IInformationStore _store;
+    private readonly DataSourcesService _dataSources;
 
-    public MemoryModel(IDataSourceManager manager) => _manager = manager;
-
-    public string? SourceName { get; set; }
-    public string? StorePath { get; set; }
-    public int EpisodeTotal { get; set; }
-    public int FactTotal { get; set; }
-    public int SkillTotal { get; set; }
-    public int CueTotal { get; set; }
-    public double AvgImportance { get; set; }
-    public double AvgConfidence { get; set; }
-
-    public List<CimaEpisode> Episodes { get; set; } = [];
-    public List<CimaFact> Facts { get; set; } = [];
-    public List<CimaSkill> Skills { get; set; } = [];
-    public List<CimaCue> Cues { get; set; } = [];
-
-    public string ActiveTab { get; set; } = "episodes";
-
-    public void OnGet(string? source = null, string? tab = null)
+    public MemoryModel(MemoryService memory, SettingsService settings, IInformationStore store, DataSourcesService dataSources)
     {
-        ActiveTab = tab ?? "episodes";
-
-        var inst = (source != null
-            ? _manager.GetInstance(source, "cima")
-            : _manager.GetInstances("cima").FirstOrDefault())
-            as CimaDataSourceInstance;
-
-        if (inst == null) return;
-
-        SourceName = inst.Name;
-        StorePath = inst.StorePath;
-
-        Episodes = inst.GetEpisodes(200).ToList();
-        Facts = inst.GetFacts().ToList();
-        Skills = inst.GetSkills().ToList();
-        Cues = inst.GetCues().ToList();
-
-        EpisodeTotal = Episodes.Count;
-        FactTotal = Facts.Count;
-        SkillTotal = Skills.Count;
-        CueTotal = Cues.Count;
-        AvgImportance = EpisodeTotal > 0 ? Math.Round(Episodes.Average(e => e.Importance), 2) : 0;
-        AvgConfidence = FactTotal > 0 ? Math.Round(Facts.Average(f => f.Confidence), 2) : 0;
+        _memory = memory;
+        _settings = settings;
+        _store = store;
+        _dataSources = dataSources;
     }
 
-    public IActionResult OnPostDeleteEpisode(string id, string? source, string tab = "episodes")
+    public List<MemoryPageConfig> Pages { get; set; } = [];
+    public Dictionary<string, string?> PagePreviews { get; set; } = [];
+    public Dictionary<string, List<string>> PageSnapshots { get; set; } = [];
+    public string? EditingPage { get; set; }
+    public MemoryPageConfig? EditConfig { get; set; }
+    public int ScanIntervalMinutes { get; set; }
+    public List<string> AvailableSources { get; set; } = [];
+    public Dictionary<string, List<string>> AvailableSourceTypes { get; set; } = [];
+
+    // View mode
+    public string? ViewingPage { get; set; }
+    public MemoryPageConfig? ViewConfig { get; set; }
+    public List<(string Label, string Content)> ViewSnapshots { get; set; } = [];
+    public string? ViewLabel { get; set; }   // selected snapshot label (dated) or null (rolling)
+    public string? ViewContent { get; set; }
+
+    public async Task OnGetAsync(string? edit = null, string? view = null, string? label = null)
     {
-        GetInst(source)?.DeleteEpisode(id);
-        return RedirectToPage(new { source, tab });
+        EditingPage = edit;
+        ViewingPage = view;
+        var s = await _settings.LoadAsync();
+        ScanIntervalMinutes = s.MemoryScanIntervalMinutes > 0 ? s.MemoryScanIntervalMinutes : 30;
+        Pages = s.MemoryPages;
+
+        if (edit != null && edit != "new")
+            EditConfig = Pages.FirstOrDefault(p => p.Name.Equals(edit, StringComparison.OrdinalIgnoreCase));
+
+        if (view != null)
+        {
+            ViewConfig = Pages.FirstOrDefault(p => p.Name.Equals(view, StringComparison.OrdinalIgnoreCase));
+            if (ViewConfig != null)
+            {
+                if (ViewConfig.Mode == "rolling")
+                {
+                    ViewContent = _memory.GetPageContent(view);
+                }
+                else
+                {
+                    // Load all snapshots for dated pages
+                    ViewSnapshots = _memory.GetPageHistory(view);
+                    ViewLabel = label ?? ViewSnapshots.FirstOrDefault().Label;
+                    ViewContent = ViewLabel != null
+                        ? _memory.GetPageContent(view, ViewLabel)
+                        : null;
+                }
+            }
+        }
+
+        foreach (var page in Pages)
+        {
+            PagePreviews[page.Name] = _memory.GetPagePreview(page.Name);
+            if (page.Mode != "rolling")
+                PageSnapshots[page.Name] = _memory.GetPageSnapshots(page.Name);
+        }
+
+        var configs = await _dataSources.LoadAsync();
+        AvailableSources = configs.Where(c => c.Enabled && !s.IsHidden(c.Name))
+            .Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
+
+        foreach (var name in AvailableSources)
+        {
+            var sourceDir = Path.Combine(_store.RootPath, name);
+            if (!Directory.Exists(sourceDir)) continue;
+            var types = Directory.GetDirectories(sourceDir)
+                .Select(Path.GetFileName).Where(t => t != null).Select(t => t!).OrderBy(t => t).ToList();
+            if (types.Count > 0) AvailableSourceTypes[name] = types;
+        }
     }
 
-    public IActionResult OnPostDeleteFact(string subject, string relation, string obj, string? source, string tab = "facts")
+    public async Task<IActionResult> OnPostSavePageAsync(string name, string? oldName, string? description,
+        string prompt, string agentTier, string mode, int? retentionPeriods, string? scanSources)
     {
-        GetInst(source)?.DeleteFact(subject, relation, obj);
-        return RedirectToPage(new { source, tab });
+        var s = await _settings.LoadAsync();
+        var config = new MemoryPageConfig
+        {
+            Name = name,
+            Description = description ?? "",
+            Prompt = prompt,
+            AgentTier = agentTier,
+            Mode = mode,
+            RetentionPeriods = retentionPeriods,
+            ScanSources = string.IsNullOrWhiteSpace(scanSources)
+                ? []
+                : [.. scanSources.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)],
+        };
+
+        if (!string.IsNullOrEmpty(oldName) && !oldName.Equals(name, StringComparison.OrdinalIgnoreCase))
+        {
+            s.MemoryPages.RemoveAll(p => p.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+            _memory.RenamePage(oldName, name);
+        }
+
+        var idx = s.MemoryPages.FindIndex(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (idx >= 0) s.MemoryPages[idx] = config;
+        else s.MemoryPages.Add(config);
+
+        await _settings.SaveAsync(s);
+        _settings.InvalidateCache();
+        return RedirectToPage();
     }
 
-    public IActionResult OnPostDeleteSkill(string trigger, string? source, string tab = "skills")
+    public IActionResult OnPostDeleteSnapshot(string name, string label)
     {
-        GetInst(source)?.DeleteSkill(trigger);
-        return RedirectToPage(new { source, tab });
+        _memory.DeletePageSnapshot(name, label);
+        return RedirectToPage(new { view = name });
     }
 
-    public IActionResult OnPostDeleteCue(string predicate, string? source, string tab = "cues")
+    public async Task<IActionResult> OnPostDeletePageAsync(string name)
     {
-        GetInst(source)?.DeleteCue(predicate);
-        return RedirectToPage(new { source, tab });
+        var s = await _settings.LoadAsync();
+        s.MemoryPages.RemoveAll(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        await _settings.SaveAsync(s);
+        _settings.InvalidateCache();
+        _memory.DeletePageContent(name);
+        return RedirectToPage();
     }
 
-    private CimaDataSourceInstance? GetInst(string? source) =>
-        (source != null
-            ? _manager.GetInstance(source, "cima")
-            : _manager.GetInstances("cima").FirstOrDefault())
-        as CimaDataSourceInstance;
-
-    public List<CimaDataSourceInstance> GetAllInstances() =>
-        _manager.GetInstances("cima").OfType<CimaDataSourceInstance>().ToList();
-
-    public string TabUrl(string tab) =>
-        SourceName != null ? $"/Memory/{Uri.EscapeDataString(SourceName)}?tab={tab}" : $"/Memory?tab={tab}";
-
-    public static string FormatTimestamp(double timestamp)
+    public async Task<IActionResult> OnPostRefreshPageAsync(string name)
     {
-        var dt = DateTimeOffset.FromUnixTimeSeconds((long)timestamp).LocalDateTime;
-        var age = DateTime.Now - dt;
-        if (age.TotalDays < 1) return dt.ToString("HH:mm");
-        if (age.TotalDays < 7) return dt.ToString("ddd HH:mm");
-        return dt.ToString("MMM d, yyyy");
+        var s = await _settings.LoadAsync();
+        var page = s.MemoryPages.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (page != null)
+        {
+            _memory.ResetPageCursors(name);
+            await _memory.ScanPageAsync(page, HttpContext.RequestAborted, force: true);
+        }
+        return RedirectToPage();
     }
+
+    public async Task<IActionResult> OnPostScanAllAsync()
+    {
+        await _memory.ScanAllAsync(HttpContext.RequestAborted);
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnGetSourceAsync(string name, string? label)
+    {
+        var s = await _settings.LoadAsync();
+        var page = s.MemoryPages.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (page == null) return NotFound();
+        var data = await _memory.GetPeriodSourceDataAsync(page, label);
+        return Content(data, "text/plain; charset=utf-8");
+    }
+
+    public static string FormatLabel(string label) => MemoryService.FormatLabel(label);
 }

@@ -9,7 +9,7 @@ public class WidgetRunnerService(
     SettingsService settings,
     IAiServiceResolver resolver,
     IInformationStore store,
-    IDataSourceManager dataSourceManager,
+    MemoryService memoryService,
     ILogger<WidgetRunnerService> logger)
 {
     public async Task<(string Content, string AgentTier, string OutputFormat)> RunAsync(
@@ -33,18 +33,24 @@ public class WidgetRunnerService(
 
         var ai = await resolver.GetServiceAsync(widget.AgentTier);
 
+        // Build memory context from selected pages
+        var memoryContext = BuildMemoryContext(widget);
+
         string content;
         string debugContext;
 
         if (widget.DataSources.Count > 0 && ai.SupportsAgentMode)
         {
             // Agent path: LLM uses search tools to fetch exactly what it needs
-            var toolService = new WidgetToolService(store, dataSourceManager, widget.DataSources, widget.ContextDays);
+            var toolService = new WidgetToolService(store, widget.DataSources, widget.ContextDays);
             var tools = toolService.GetToolDefinitions();
             var inventory = toolService.BuildSourceInventory();
             var roster = toolService.BuildAuthorRoster();
 
-            var systemPrompt = $"You are a personal assistant.{dateBlurb}{profileBlurb}\n\n" +
+            var systemPrompt = (memoryContext.Length > 0
+                ? $"CURATED MEMORY CONTEXT (pre-distilled from data sources):\n\n{memoryContext}\n\n"
+                : "") +
+                $"You are a personal assistant.{dateBlurb}{profileBlurb}\n\n" +
                 $"You MUST call the available search tools to retrieve data before answering. " +
                 $"Do not answer from memory or general knowledge — always search first. " +
                 $"Search multiple sources and data types when they are relevant — do not stop after one tool call.\n\n" +
@@ -73,7 +79,10 @@ public class WidgetRunnerService(
         else
         {
             // Fallback path: pre-read files and dump context
-            var systemPrompt = $"You are a personal assistant.{dateBlurb}{profileBlurb}\n\n{formatInstructions}";
+            var systemPrompt = (memoryContext.Length > 0
+                ? $"CURATED MEMORY CONTEXT (pre-distilled from data sources):\n\n{memoryContext}\n\n"
+                : "") +
+                $"You are a personal assistant.{dateBlurb}{profileBlurb}\n\n{formatInstructions}";
             var contextSb = new StringBuilder();
             const int MaxContextChars = 80_000;
             var cutoff = DateTime.UtcNow.AddDays(-Math.Max(1, widget.ContextDays));
@@ -166,6 +175,38 @@ public class WidgetRunnerService(
         await File.WriteAllTextAsync(Path.Combine(cachePath, $"{widget.Id}.context.md"), debugContext, ct);
 
         return (content, widget.AgentTier, widget.OutputFormat);
+    }
+
+    private string BuildMemoryContext(UserDashboardWidget widget)
+    {
+        if (widget.MemoryPages.Count == 0) return "";
+        var pages = memoryService.GetPages();
+        var sb = new StringBuilder();
+        foreach (var pageName in widget.MemoryPages)
+        {
+            var page = pages.FirstOrDefault(p => p.Name.Equals(pageName, StringComparison.OrdinalIgnoreCase));
+            string? content;
+            string header;
+            if (page?.Mode != "rolling" && page != null)
+            {
+                var history = memoryService.GetPageHistory(pageName, widget.ContextDays);
+                if (history.Count == 0) continue;
+                content = string.Join("\n\n", history.Select(h =>
+                    $"### {MemoryService.FormatLabel(h.Label)}\n{h.Content}"));
+                header = $"## Memory: {pageName}";
+            }
+            else
+            {
+                content = memoryService.GetPageContent(pageName);
+                var updated = memoryService.GetPageLastModified(pageName);
+                header = updated.HasValue
+                    ? $"## Memory: {pageName} (as of {updated.Value.LocalDateTime:MMM d})"
+                    : $"## Memory: {pageName}";
+            }
+            if (!string.IsNullOrEmpty(content))
+                sb.AppendLine($"{header}\n{content}\n");
+        }
+        return sb.ToString();
     }
 
     private static string StripCodeFence(string text)

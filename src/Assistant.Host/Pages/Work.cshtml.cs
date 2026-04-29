@@ -27,14 +27,20 @@ public class WorkModel : PageModel
     public async Task OnGetAsync()
     {
         var s = await _settings.LoadAsync();
-        Jobs = s.WorkJobs;
+        Jobs = s.WorkJobs
+            .Where(j => !s.IsHidden(j.Name) && !j.DataSources.Any(ds => s.IsHidden(ds)))
+            .ToList();
         Agents = s.Agents;
-        RecentRuns = _workJobs.GetRecentRuns();
-        RunningIds = _workJobs.GetRunningIds();
+        var visibleJobIds = Jobs.Select(j => j.Id).ToHashSet();
+        RecentRuns = _workJobs.GetRecentRuns()
+            .Where(r => visibleJobIds.Contains(r.JobId))
+            .ToList();
+        RunningIds = _workJobs.GetRunningIds()
+            .Where(id => visibleJobIds.Contains(id))
+            .ToList();
 
-        var hidden = new HashSet<string>(s.HiddenNames, StringComparer.OrdinalIgnoreCase);
         var allSources = await _sources.LoadAsync();
-        var visibleSources = allSources.Where(c => c.Enabled && !hidden.Contains(c.Name)).ToList();
+        var visibleSources = allSources.Where(c => c.Enabled && !s.IsHidden(c.Name)).ToList();
         AllSources = visibleSources;
         FolderSources = visibleSources.Where(c => c.Type == "folder").ToList();
     }

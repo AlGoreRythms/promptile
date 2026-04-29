@@ -25,12 +25,10 @@ public class BriefsModel : PageModel
     public async Task OnGetAsync()
     {
         var s = await _settings.LoadAsync();
-        var hiddenNames = new HashSet<string>(s.HiddenNames, StringComparer.OrdinalIgnoreCase);
-
         var briefNames = _dataSourceManager.GetInstances()
             .Select(i => i.Name)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(n => !hiddenNames.Contains(n))
+            .Where(n => !s.IsHidden(n))
             .OrderBy(n => n)
             .ToList();
 

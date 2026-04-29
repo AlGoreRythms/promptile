@@ -65,8 +65,7 @@ public class SettingsModel : PageModel
     private async Task LoadSourcesAsync()
     {
         var all = await _sources.LoadAsync();
-        var hidden = new HashSet<string>(Settings.HiddenNames, StringComparer.OrdinalIgnoreCase);
-        SourceConfigs = hidden.Count > 0 ? all.Where(c => !hidden.Contains(c.Name)).ToList() : all;
+        SourceConfigs = Settings.HiddenNames.Count > 0 ? all.Where(c => !Settings.IsHidden(c.Name)).ToList() : all;
         SourceProviders = _manager.GetProviders();
         foreach (var instance in _manager.GetInstances())
         {
@@ -194,6 +193,18 @@ public class SettingsModel : PageModel
         Settings = s;
         LoadGoogleCredentials();
         NotificationsMessage = "Notification settings saved.";
+        CheckStatus();
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostSaveMemoryAsync()
+    {
+        var s = await _settings.LoadAsync();
+        if (int.TryParse(Request.Form["MemoryScanIntervalMinutes"], out var interval) && interval > 0)
+            s.MemoryScanIntervalMinutes = interval;
+        await _settings.SaveAsync(s);
+        _settings.InvalidateCache();
+        Settings = s;
         CheckStatus();
         return Page();
     }

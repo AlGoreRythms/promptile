@@ -1,11 +1,10 @@
 using System.Text;
 using System.Text.Json;
 using Assistant.Sdk;
-using Cima;
 
 namespace Assistant.Host.Services;
 
-public class WidgetToolService(IInformationStore store, IDataSourceManager dataSourceManager, List<string> dataSources, int contextDays)
+public class WidgetToolService(IInformationStore store, List<string> dataSources, int contextDays)
 {
     private readonly Dictionary<string, HashSet<string>?> _sourceFilters = ParseFilters(dataSources);
 
@@ -118,22 +117,6 @@ public class WidgetToolService(IInformationStore store, IDataSourceManager dataS
                 }
                 """));
 
-        if (dataSourceManager.GetInstances("cima").Any())
-            tools.Add(new ToolDefinition(
-                "search_cima_memory",
-                "Query cross-referenced memory extracted from Slack, Gmail, and Calendar. Use this to retrieve facts about people, decisions, project relationships, and recurring patterns.",
-                """
-                {
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "What to look up in memory"},
-                        "entities": {"type": "string", "description": "Comma-separated names to focus retrieval (e.g. 'Alice,Project X')"},
-                        "source_name": {"type": "string", "description": "CIMA source name (omit if only one configured)"}
-                    },
-                    "required": ["query"]
-                }
-                """));
-
         return tools;
     }
 
@@ -142,7 +125,6 @@ public class WidgetToolService(IInformationStore store, IDataSourceManager dataS
         {
             "search_slack_messages" => await SearchSlackAsync(call.InputJson, ct),
             "search_jira_issues" => await SearchJiraAsync(call.InputJson, ct),
-            "search_cima_memory" => SearchCimaMemory(call.InputJson),
             _ => $"Unknown tool: {call.Name}",
         };
 
@@ -320,26 +302,6 @@ public class WidgetToolService(IInformationStore store, IDataSourceManager dataS
         return results.Length == 0
             ? "No Jira issues found matching the criteria."
             : results.ToString();
-    }
-
-    private string SearchCimaMemory(string inputJson)
-    {
-        using var doc = JsonDocument.Parse(inputJson);
-        var root = doc.RootElement;
-        var query = root.TryGetProperty("query", out var q) ? q.GetString() ?? "" : "";
-        var entities = root.TryGetProperty("entities", out var e) ? e.GetString() : null;
-        var sourceName = root.TryGetProperty("source_name", out var sn) ? sn.GetString() : null;
-
-        var inst = (sourceName != null
-            ? dataSourceManager.GetInstance(sourceName, "cima")
-            : dataSourceManager.GetInstances("cima").FirstOrDefault())
-            as CimaDataSourceInstance;
-
-        if (inst == null) return "No CIMA memory configured.";
-
-        var entityList = entities?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var ctx = inst.QueryContext(query, entityList);
-        return JsonSerializer.Serialize(ctx, new JsonSerializerOptions { WriteIndented = true });
     }
 
     private bool HasSourceType(string type)

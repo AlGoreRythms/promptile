@@ -9,12 +9,14 @@ public class IndexModel : PageModel
     private readonly SettingsService _settings;
     private readonly IInformationStore _store;
     private readonly DataSourcesService _dataSources;
+    private readonly MemoryService _memory;
 
-    public IndexModel(SettingsService settings, IInformationStore store, DataSourcesService dataSources)
+    public IndexModel(SettingsService settings, IInformationStore store, DataSourcesService dataSources, MemoryService memory)
     {
         _settings = settings;
         _store = store;
         _dataSources = dataSources;
+        _memory = memory;
     }
 
     public List<(UserDashboardWidget Widget, string? Content, DateTimeOffset? CachedAt)> Widgets { get; set; } = [];
@@ -22,15 +24,15 @@ public class IndexModel : PageModel
     public string HomeName { get; set; } = "Default";
     public List<string> AvailableSources { get; set; } = [];
     public Dictionary<string, List<string>> AvailableSourceTypes { get; set; } = [];
+    public List<MemoryPageConfig> MemoryPages { get; set; } = [];
 
     public async Task OnGetAsync()
     {
         var s = await _settings.LoadAsync();
         var cachePath = _store.GetNotesPath("_Assistant", "DashboardCache");
 
-        var hiddenNames = new HashSet<string>(s.HiddenNames, StringComparer.OrdinalIgnoreCase);
         foreach (var w in s.DashboardWidgets.OrderBy(x => x.Order)
-            .Where(w => !w.DataSources.Any(ds => hiddenNames.Contains(ds))))
+            .Where(w => !w.DataSources.Any(ds => s.IsHidden(ds))))
         {
             var filePath = Path.Combine(cachePath, $"{w.Id}.md");
             string? content = null;
@@ -44,12 +46,12 @@ public class IndexModel : PageModel
         }
 
         Pages = s.DashboardPages.OrderBy(p => p.Order)
-            .Where(p => !hiddenNames.Contains(p.Name))
+            .Where(p => !s.IsHidden(p.Name))
             .ToList();
         HomeName = s.DashboardHomeName;
 
         var configs = await _dataSources.LoadAsync();
-        AvailableSources = configs.Where(c => c.Enabled && !hiddenNames.Contains(c.Name))
+        AvailableSources = configs.Where(c => c.Enabled && !s.IsHidden(c.Name))
             .Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
 
         foreach (var name in AvailableSources)
@@ -65,5 +67,7 @@ public class IndexModel : PageModel
             if (types.Count > 0)
                 AvailableSourceTypes[name] = types;
         }
+
+        MemoryPages = _memory.GetPages().ToList();
     }
 }

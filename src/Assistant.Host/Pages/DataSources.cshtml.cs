@@ -29,8 +29,7 @@ public class DataSourcesModel : PageModel
     {
         var allConfigs = await _sources.LoadAsync();
         var s = await _settings.LoadAsync();
-        var hidden = new HashSet<string>(s.HiddenNames, StringComparer.OrdinalIgnoreCase);
-        Configs = hidden.Count > 0 ? allConfigs.Where(c => !hidden.Contains(c.Name)).ToList() : allConfigs;
+        Configs = s.HiddenNames.Count > 0 ? allConfigs.Where(c => !s.IsHidden(c.Name)).ToList() : allConfigs;
         Providers = _manager.GetProviders();
         EditingId = edit;
         ShowAdd = add;

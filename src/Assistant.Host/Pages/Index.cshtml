@@ -84,6 +84,10 @@
     animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
 
+/* Memory page toggle pills */
+button.mem-pg-btn { font-size: 0.82rem; padding: 0.25rem 0.65rem; }
+button.mem-pg-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* Add/edit form */
 .widget-form {
     border: 1px dashed var(--accent);
@@ -184,6 +188,7 @@
                                         data-wtier="@item.Widget.AgentTier"
                                         data-wfmt="@item.Widget.OutputFormat"
                                         data-wsources="@string.Join(',', item.Widget.DataSources)"
+                                        data-wmemory="@string.Join(',', item.Widget.MemoryPages)"
                                         data-wcolor="@(item.Widget.Color ?? "")"
                                         data-whide="@(item.Widget.HideHeader ? "1" : "0")"
                                         data-wfooterhide="@(item.Widget.HideFooter ? "1" : "0")"
@@ -250,6 +255,7 @@ function showWidgetSkeleton(body) {
 
 const availableSources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableSources));
 const availableSourceTypes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableSourceTypes));
+const memoryPages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MemoryPages.Select(p => new { name = p.Name, description = p.Description })));
 const dashPages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
     new[] { new { id = "", name = Model.HomeName } }
     .Concat(Model.Pages.Select(p => new { id = p.Id, name = p.Name }))
@@ -376,12 +382,14 @@ function editWidget(btn) {
     const d = btn.dataset;
     showWidgetForm(d.wid, d.wtitle, d.wprompt, d.wtier, d.wfmt,
         d.wsources ? d.wsources.split(',').filter(Boolean) : [],
+        d.wmemory ? d.wmemory.split(',').filter(Boolean) : [],
         d.wcolor || '', d.whide === '1', d.wfooterhide === '1', d.wpageid ?? '',
         parseInt(d.wcontextdays || '7'));
 }
 
-function showWidgetForm(id, title, prompt, tier, fmt, selectedSources, color, hideHeader, hideFooter, _pageId, contextDays) {
+function showWidgetForm(id, title, prompt, tier, fmt, selectedSources, selectedMemory, color, hideHeader, hideFooter, _pageId, contextDays) {
     selectedSources = selectedSources || [];
+    selectedMemory = selectedMemory || [];
     color = color || '';
     hideHeader = !!hideHeader;
     hideFooter = !!hideFooter;
@@ -418,6 +426,20 @@ function showWidgetForm(id, title, prompt, tier, fmt, selectedSources, color, hi
                 }).join('')}
             </div>
         </div>` : '';
+    const memoryHtml = memoryPages.length ? `
+        <div class="mb-2">
+            <label class="text-sm text-muted">Memory pages</label>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.3rem">
+                ${memoryPages.map(mp => {
+                    const active = selectedMemory.includes(mp.name);
+                    const title = mp.description ? `${esc(mp.name)}: ${esc(mp.description)}` : esc(mp.name);
+                    return `<button type="button" class="src-mask-btn mem-pg-btn secondary ${active ? 'active' : ''}"
+                        data-name="${esc(mp.name)}" title="${title}"
+                        onclick="this.classList.toggle('active')">${esc(mp.name)}</button>`;
+                }).join('')}
+            </div>
+        </div>` : '';
+
     const container = document.getElementById('widget-form-container');
     container.innerHTML = `
         <div class="widget-form">
@@ -432,6 +454,7 @@ function showWidgetForm(id, title, prompt, tier, fmt, selectedSources, color, hi
                 <textarea id="form-prompt" rows="3" placeholder="e.g. What should I be paying attention to with my team today?">${esc(prompt || '')}</textarea>
             </div>
             ${sourcesHtml}
+            ${memoryHtml}
             <div style="display:flex;gap:1rem;margin-bottom:0.75rem">
                 <div style="flex:1">
                     <label class="text-sm text-muted">Agent</label>
@@ -539,6 +562,7 @@ async function saveWidget() {
     const tier = document.getElementById('form-tier').value;
     const fmt = document.getElementById('form-fmt').value;
     const sources = collectSrcMask();
+    const memoryPagesSelected = [...document.querySelectorAll('.mem-pg-btn.active')].map(btn => btn.dataset.name);
     const cleared = document.getElementById('form-color-clear')?.value === '1';
     const color = cleared ? '' : (document.getElementById('form-color')?.value || '');
     const hideHeader = document.getElementById('form-hide-header')?.checked ?? false;
@@ -551,7 +575,8 @@ async function saveWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: id || undefined, pageId: id ? undefined : currentPageId,
             title, prompt, agentTier: tier, outputFormat: fmt,
-            dataSources: sources, color: color || null, hideHeader, hideFooter, contextDays })
+            dataSources: sources, memoryPages: memoryPagesSelected,
+            color: color || null, hideHeader, hideFooter, contextDays })
     });
     if (resp.ok) location.reload();
 }

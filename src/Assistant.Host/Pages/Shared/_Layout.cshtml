@@ -114,7 +114,7 @@
 
             function matchesHidden(text) {
                 var t = (text || '').trim().toLowerCase();
-                return hidden.some(function(n) { return t === n || t.startsWith(n + ' ') || t.startsWith(n + '\n'); });
+                return hidden.some(function(n) { return t.includes(n); });
             }
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -136,6 +136,17 @@
                 document.querySelectorAll('tr').forEach(function(el) {
                     var cell = el.querySelector('td');
                     if (cell && matchesHidden(cell.textContent)) el.style.display = 'none';
+                });
+
+                // Dashboard page tabs and their content panels
+                document.querySelectorAll('#dash-tabs .dash-tab').forEach(function(tab) {
+                    var nameEl = tab.querySelector('.dash-tab-name');
+                    if (nameEl && matchesHidden(nameEl.textContent)) {
+                        tab.style.display = 'none';
+                        var pageId = tab.dataset.pageId;
+                        var page = document.querySelector('.dash-page[data-page-id="' + pageId + '"]');
+                        if (page) page.style.display = 'none';
+                    }
                 });
 
 

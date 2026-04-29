@@ -60,6 +60,8 @@ public static class TrayHost
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<EmbeddingService>());
             builder.Services.AddSingleton<SyncStatusService>();
             builder.Services.AddSingleton<ISyncReporter>(sp => sp.GetRequiredService<SyncStatusService>());
+            builder.Services.AddSingleton<MemoryService>();
+            builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<MemoryService>());
             builder.Services.AddSingleton<WidgetRunnerService>();
             builder.Services.AddSingleton<WidgetRefreshService>();
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<WidgetRefreshService>());
@@ -304,6 +306,8 @@ public static class TrayHost
                     existing.AgentTier = body.AgentTier ?? "medium";
                     existing.OutputFormat = body.OutputFormat ?? "markdown";
                     existing.DataSources = body.DataSources ?? [];
+                    existing.MemoryPages = body.MemoryPages ?? [];
+                    existing.ContextDays = body.ContextDays > 0 ? body.ContextDays : 7;
                     existing.Color = string.IsNullOrEmpty(body.Color) ? null : body.Color;
                     existing.HideHeader = body.HideHeader ?? false;
                     existing.HideFooter = body.HideFooter ?? false;
@@ -320,6 +324,8 @@ public static class TrayHost
                         AgentTier = body.AgentTier ?? "medium",
                         OutputFormat = body.OutputFormat ?? "markdown",
                         DataSources = body.DataSources ?? [],
+                        MemoryPages = body.MemoryPages ?? [],
+                        ContextDays = body.ContextDays > 0 ? body.ContextDays : 7,
                         Color = string.IsNullOrEmpty(body.Color) ? null : body.Color,
                         HideHeader = body.HideHeader ?? false,
                         HideFooter = body.HideFooter ?? false,
@@ -653,7 +659,7 @@ app.MapPost("/api/dashboard/widgets/{id}/run", async (string id, SettingsService
     }
 }
 
-file record DashboardWidgetSaveRequest(string? Id, string? PageId, string Title, string Prompt, string? AgentTier, string? OutputFormat, List<string>? DataSources, string? Color, bool? HideHeader, bool? HideFooter);
+file record DashboardWidgetSaveRequest(string? Id, string? PageId, string Title, string Prompt, string? AgentTier, string? OutputFormat, List<string>? DataSources, List<string>? MemoryPages, int ContextDays, string? Color, bool? HideHeader, bool? HideFooter);
 file record DashboardWidgetMoveRequest(string? PageId);
 file record DashboardPageRequest(string Name);
 file record GridPositionUpdate(string Id, int X, int Y, int W, int H);

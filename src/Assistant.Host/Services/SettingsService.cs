@@ -85,6 +85,10 @@ public class AssistantSettings
     // Work jobs — context from data sources piped to an agent acting on a folder
     public List<WorkJob> WorkJobs { get; set; } = [];
 
+    // Memory pages — global curation layer over data sources
+    public List<MemoryPageConfig> MemoryPages { get; set; } = [];
+    public int MemoryScanIntervalMinutes { get; set; } = 30;
+
     // User-configured dashboard pages and widgets
     public string DashboardHomeName { get; set; } = "Default";
     public List<DashboardPage> DashboardPages { get; set; } = [];
@@ -92,6 +96,9 @@ public class AssistantSettings
 
     // Names hidden from all pages — sources, widgets, tasks, and plugin content matching these are invisible
     public List<string> HiddenNames { get; set; } = [];
+
+    public bool IsHidden(string name) =>
+        HiddenNames.Any(h => !string.IsNullOrEmpty(h) && name.Contains(h, StringComparison.OrdinalIgnoreCase));
 }
 
 public record ScheduledJob(
@@ -147,6 +154,7 @@ public class UserDashboardWidget
     public string AgentTier { get; set; } = "medium";
     public string OutputFormat { get; set; } = "markdown"; // "markdown" | "text" | "html"
     public List<string> DataSources { get; set; } = [];
+    public List<string> MemoryPages { get; set; } = [];
     public int Order { get; set; }
     public string? Color { get; set; }
     public bool HideHeader { get; set; } = false;

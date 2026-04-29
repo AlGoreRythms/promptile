@@ -20,7 +20,6 @@ using Jira;
 using Folder;
 using Asana;
 using Rss;
-using Cima;
 
 namespace Assistant.Host;
 
@@ -54,7 +53,6 @@ public static class Program
             new FolderDataSourceProvider(),
             new AsanaDataSourceProvider(),
             new RssDataSourceProvider(),
-            new CimaDataSourceProvider(),
         };
 
         var registry = new PluginRegistry(settingsService);
@@ -113,8 +111,11 @@ public static class Program
         var mcpBuilder = host.Services.AddMcpServer()
             .WithStdioServerTransport();
 
+        host.Services.AddSingleton<MemoryService>();
+        host.Services.AddHostedService(sp => sp.GetRequiredService<MemoryService>());
+
         var settings = settingsService.LoadSync();
-        var toolTypes = new List<Type> { typeof(InformationStoreMcpTools) };
+        var toolTypes = new List<Type> { typeof(InformationStoreMcpTools), typeof(MemoryMcpTools) };
 
         foreach (var plugin in plugins)
         {

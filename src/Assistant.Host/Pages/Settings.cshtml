@@ -486,6 +486,22 @@
         </details>
     </div>
 
+    <form method="post" asp-page-handler="SaveMemory" class="card mb-2">
+        <h2>Memory</h2>
+        <p class="text-sm text-muted mt-1 mb-3">
+            Memory pages are configured in <a href="/Memory">Memory</a>.
+            Set the scan interval here.
+        </p>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+            <label class="text-sm text-muted" style="white-space:nowrap">Scan interval (minutes)</label>
+            <input type="number" name="MemoryScanIntervalMinutes" value="@Model.Settings.MemoryScanIntervalMinutes"
+                   min="1" max="1440" style="max-width:100px" />
+        </div>
+        <div class="flex justify-end mt-2">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
     <form method="post" asp-page-handler="SaveWatchlist" class="card mb-2">
         <h2>Watchlist</h2>
         <p class="text-sm text-muted mt-1 mb-3">Keywords or <code>/regex/</code> patterns to watch for in synced data. One per line. Matching triggers an immediate tray notification.</p>

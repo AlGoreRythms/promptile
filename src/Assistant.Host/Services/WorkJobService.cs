@@ -147,11 +147,10 @@ public class WorkJobService : IHostedService
             if (agent == null) { Log("No agent configured. Set one in Settings → Agents."); return; }
 
             var allSources = await _sources.LoadAsync();
-            var hidden = new HashSet<string>(s.HiddenNames, StringComparer.OrdinalIgnoreCase);
             var allowedNames = new HashSet<string>(
-                allSources.Where(c => c.Enabled && !hidden.Contains(c.Name)).Select(c => c.Name),
+                allSources.Where(c => c.Enabled && !s.IsHidden(c.Name)).Select(c => c.Name),
                 StringComparer.OrdinalIgnoreCase);
-            var folderConfig = allSources.FirstOrDefault(c => c.Id == job.FolderSourceId && c.Type == "folder" && c.Enabled && !hidden.Contains(c.Name));
+            var folderConfig = allSources.FirstOrDefault(c => c.Id == job.FolderSourceId && c.Type == "folder" && c.Enabled && !s.IsHidden(c.Name));
             if (folderConfig == null) { Log("Folder source not found."); return; }
 
             var folderPath = folderConfig.Config.GetValueOrDefault("path", "");

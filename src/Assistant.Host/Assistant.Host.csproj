@@ -35,7 +35,6 @@
     <ProjectReference Include="..\Folder.Plugin\Folder.Plugin.csproj" />
     <ProjectReference Include="..\Asana.Plugin\Asana.Plugin.csproj" />
     <ProjectReference Include="..\Rss.Plugin\Rss.Plugin.csproj" />
-    <ProjectReference Include="..\Cima.Plugin\Cima.Plugin.csproj" />
   </ItemGroup>
 
   <!-- Build the .app bundle and ad-hoc sign it so macOS grants notification permission -->
