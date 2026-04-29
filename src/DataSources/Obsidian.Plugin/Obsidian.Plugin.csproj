@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Linear</RootNamespace>
+    <RootNamespace>Obsidian</RootNamespace>
   </PropertyGroup>
+
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\Assistant.Sdk\Assistant.Sdk.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Assistant.Sdk\Assistant.Sdk.csproj" />
-  </ItemGroup>
+
 </Project>

@@ -25,16 +25,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Assistant.Sdk\Assistant.Sdk.csproj" />
-    <ProjectReference Include="..\Slack.Plugin\Slack.Plugin.csproj" />
-    <ProjectReference Include="..\Gmail.Plugin\Gmail.Plugin.csproj" />
-    <ProjectReference Include="..\Calendar.Plugin\Calendar.Plugin.csproj" />
-    <ProjectReference Include="..\Obsidian.Plugin\Obsidian.Plugin.csproj" />
-    <ProjectReference Include="..\Linear.Plugin\Linear.Plugin.csproj" />
-    <ProjectReference Include="..\GitHub.Plugin\GitHub.Plugin.csproj" />
-    <ProjectReference Include="..\Jira.Plugin\Jira.Plugin.csproj" />
-    <ProjectReference Include="..\Folder.Plugin\Folder.Plugin.csproj" />
-    <ProjectReference Include="..\Asana.Plugin\Asana.Plugin.csproj" />
-    <ProjectReference Include="..\Rss.Plugin\Rss.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Slack.Plugin\Slack.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Gmail.Plugin\Gmail.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Calendar.Plugin\Calendar.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Obsidian.Plugin\Obsidian.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Linear.Plugin\Linear.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\GitHub.Plugin\GitHub.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Jira.Plugin\Jira.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Folder.Plugin\Folder.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Asana.Plugin\Asana.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Rss.Plugin\Rss.Plugin.csproj" />
   </ItemGroup>
 
   <!-- Build the .app bundle and ad-hoc sign it so macOS grants notification permission -->

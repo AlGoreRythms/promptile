@@ -3,12 +3,12 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Folder</RootNamespace>
+    <RootNamespace>GitHub</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Assistant.Sdk\Assistant.Sdk.csproj" />
+    <ProjectReference Include="..\..\Assistant.Sdk\Assistant.Sdk.csproj" />
   </ItemGroup>
 </Project>
