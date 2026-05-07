@@ -44,7 +44,7 @@
 
             <div class="mb-3">
                 <label class="text-sm text-muted">Name <span class="text-muted">(used to group related sources)</span></label>
-                <input type="text" name="name" value="@(editing?.Name ?? "")"
+                <input type="text" name="name" value="@(editing?.Name ?? Request.Query["name"].ToString())"
                        placeholder="e.g. Work, Personal, Home" required />
             </div>
 
@@ -62,7 +62,7 @@
                 {
                     <input type="hidden" name="type" value="@selectedType" />
                     <select id="type-select" style="width:auto"
-                            onchange="window.location='/DataSources?add=true&type='+encodeURIComponent(this.value)">
+                            onchange="var n=document.querySelector('input[name=name]')?.value||'';window.location='/DataSources?add=true&type='+encodeURIComponent(this.value)+(n?'&name='+encodeURIComponent(n):'')">
                         @foreach (var p in Model.Providers)
                         {
                             if (p.Type == selectedType)
