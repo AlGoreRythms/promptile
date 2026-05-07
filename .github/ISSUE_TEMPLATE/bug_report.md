@@ -24,7 +24,7 @@ What actually happened.
 - Mode: [serve / mcp]
 
 **Logs**
-Paste the relevant section from `~/.assistant/logs/assistant.log` (or `mcp.log` for MCP mode).
+Paste the relevant section from `~/.promptile/logs/assistant.log` (or `mcp.log` for MCP mode).
 
 ```
 paste logs here

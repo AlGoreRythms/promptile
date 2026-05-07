@@ -299,7 +299,7 @@
 
     <form method="post" asp-page-handler="SaveEmbedding" class="card mb-2">
         <h2>Semantic Search</h2>
-        <p class="text-sm text-muted mt-1 mb-3">Configure a local embedding endpoint (LM Studio or any OpenAI-compatible server) to enable the <code>store_search</code> MCP tool. Embeddings are indexed locally in <code>~/.assistant/embeddings.db</code>.</p>
+        <p class="text-sm text-muted mt-1 mb-3">Configure a local embedding endpoint (LM Studio or any OpenAI-compatible server) to enable the <code>store_search</code> MCP tool. Embeddings are indexed locally in <code>~/.promptile/embeddings.db</code>.</p>
         <div class="flex gap-1 mb-2" style="flex-wrap:wrap; align-items:flex-end">
             <div style="flex:1; min-width:200px">
                 <label class="text-sm text-muted">Embedding base URL</label>
@@ -618,7 +618,7 @@
         <div class="mb-3">
             <label class="text-sm text-muted">Storage path</label>
             <input type="text" name="InformationStorePath" value="@Model.Settings.InformationStorePath"
-                   placeholder="~/Documents/Assistant" style="font-family:monospace" />
+                   placeholder="~/.promptile/store" style="font-family:monospace" />
         </div>
         <div class="flex justify-between items-center mt-2">
             @if (!string.IsNullOrEmpty(Model.StoreMessage))
@@ -665,8 +665,8 @@
     <div class="card mb-2">
         <h2>Status</h2>
         <div class="text-sm">
-            <div>Settings file: <code>~/.assistant/settings.json</code></div>
-            <div>Logs: <code>~/.assistant/logs/</code></div>
+            <div>Settings file: <code>~/.promptile/settings.json</code></div>
+            <div>Logs: <code>~/.promptile/logs/</code></div>
             <div class="mt-1">
                 Claude CLI available:
                 @if (Model.ClaudeCliAvailable)
