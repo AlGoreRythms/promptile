@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Assistant.Sdk\Assistant.Sdk.csproj" />
+    <ProjectReference Include="..\..\Promptile.Sdk\Promptile.Sdk.csproj" />
   </ItemGroup>
 
 </Project>

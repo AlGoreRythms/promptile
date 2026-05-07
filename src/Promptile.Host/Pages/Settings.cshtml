@@ -1,0 +1,846 @@
+@page
+@model Promptile.Host.Pages.SettingsModel
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<style>
+.settings-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+.settings-tab {
+    padding: 0.5rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    user-select: none;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    transition: color 0.15s;
+}
+.settings-tab:hover { color: var(--text); }
+.settings-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.settings-panel { display: none; }
+.settings-panel.active { display: block; }
+</style>
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem">
+    <h1 style="margin:0">Settings</h1>
+</div>
+
+<div class="settings-tabs">
+    <button class="settings-tab" data-tab="profile">Profile</button>
+    <button class="settings-tab" data-tab="sources">Sources</button>
+    <button class="settings-tab" data-tab="plugins">Plugins</button>
+    <button class="settings-tab" data-tab="providers">Providers</button>
+    <button class="settings-tab" data-tab="agents">Agents</button>
+    <button class="settings-tab" data-tab="automation">Automation</button>
+    <button class="settings-tab" data-tab="integrations">Integrations</button>
+    <button class="settings-tab" data-tab="system">System</button>
+    <button class="settings-tab" data-tab="security">Security</button>
+</div>
+
+<!-- Profile -->
+<div class="settings-panel" data-panel="profile">
+    <form method="post" asp-page-handler="SaveProfile" class="card mb-2">
+        <h2>About Me</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Tell the assistant who you are. Injected into every chat as context.</p>
+        <textarea name="UserProfile" rows="6"
+                  style="width:100%; font-size:0.85rem; resize:vertical"
+                  placeholder="I'm Jane Smith, a software engineer. My timezone is PST...">@Model.Settings.UserProfile</textarea>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.ProfileMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.ProfileMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+    <form method="post" asp-page-handler="SaveChatPrompt" class="card mb-2">
+        <h2>Chat System Prompt</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Prepended to the built-in assistant prompt. Use this to set response style, language preferences, etc.</p>
+        <textarea name="ChatSystemPrompt" rows="6"
+                  style="width:100%; font-size:0.85rem; font-family:monospace; resize:vertical"
+                  placeholder="e.g. Respond concisely. Prefer bullet points. Always cite your sources.">@Model.Settings.ChatSystemPrompt</textarea>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.ChatPromptMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.ChatPromptMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<!-- Sources -->
+<div class="settings-panel" data-panel="sources">
+    <div class="card mb-2" style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem">
+        <h2 style="margin:0">Data Sources</h2>
+        <div class="flex gap-1">
+            @if (Model.SourceConfigs.Any(c => c.Enabled))
+            {
+                <form method="post" asp-page-handler="ResetAllSources">
+                    <button class="secondary" style="font-size:0.82rem"
+                            onclick="return confirm('Reset sync state for all sources?')">↺ Resync All</button>
+                </form>
+            }
+            <a href="/DataSources?add=true" class="btn" style="font-size:0.82rem">+ Add Source</a>
+        </div>
+    </div>
+
+    @if (!Model.SourceConfigs.Any())
+    {
+        <div class="card" style="text-align:center; padding:2rem; color:var(--text-muted)">
+            <div>No data sources configured yet.</div>
+            <div class="mt-2"><a href="/DataSources?add=true" class="btn">+ Add your first source</a></div>
+        </div>
+    }
+    else
+    {
+        @foreach (var cfg in Model.SourceConfigs)
+        {
+            var cfgProvider = Model.SourceProviders.FirstOrDefault(p => p.Type == cfg.Type);
+            Model.SourceStatuses.TryGetValue(cfg.Id, out var status);
+
+            <div class="card mb-2 @(!cfg.Enabled ? "plugin-disabled" : "")">
+                <div class="plugin-card-header">
+                    <span class="plugin-card-icon" style="font-size:1.2rem">@(cfgProvider?.Icon ?? "📦")</span>
+                    <div>
+                        <div style="display:flex; align-items:center; gap:0.5rem">
+                            <strong>@cfg.Name</strong>
+                            <span class="badge">@(cfgProvider?.DisplayName ?? cfg.Type)</span>
+                        </div>
+                        <div class="text-sm text-muted mt-1">
+                            @if (status != null)
+                            {
+                                if (status.Connected)
+                                {
+                                    <span style="color:var(--success)">● Connected</span>
+                                    if (!string.IsNullOrEmpty(status.Message))
+                                    { <span class="text-muted"> — @status.Message</span> }
+                                }
+                                else
+                                {
+                                    <span style="color:var(--danger)">● @(status.Message ?? "Error")</span>
+                                }
+                            }
+                            else if (!cfg.Enabled)
+                            {
+                                <span>Disabled</span>
+                            }
+                            else
+                            {
+                                <span>Starting…</span>
+                            }
+                        </div>
+                    </div>
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:0.4rem">
+                        @if (status?.AuthUrl != null)
+                        {
+                            <a href="@status.AuthUrl" class="btn" style="font-size:0.78rem; padding:0.25rem 0.6rem">🔑 Re-auth</a>
+                        }
+                        <a href="/DataSources?edit=@cfg.Id" class="btn secondary" style="font-size:0.78rem; padding:0.25rem 0.6rem">Edit</a>
+                        @if (cfg.Enabled)
+                        {
+                            <form method="post" asp-page-handler="ResetSource" style="margin:0"
+                                  onsubmit="return confirm('Reset sync state for @cfg.Name?')">
+                                <input type="hidden" name="id" value="@cfg.Id" />
+                                <button class="secondary" style="font-size:0.78rem; padding:0.25rem 0.6rem" title="Re-sync from beginning">↺</button>
+                            </form>
+                        }
+                        <form method="post" asp-page-handler="ToggleSource" style="margin:0">
+                            <input type="hidden" name="id" value="@cfg.Id" />
+                            <button class="toggle-btn @(cfg.Enabled ? "toggle-on" : "toggle-off")">
+                                @(cfg.Enabled ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                        <form method="post" asp-page-handler="DeleteSource" style="margin:0"
+                              onsubmit="return confirm('Delete @cfg.Name?')">
+                            <input type="hidden" name="id" value="@cfg.Id" />
+                            <button class="btn-danger btn" style="font-size:0.78rem; padding:0.25rem 0.6rem">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Plugins -->
+<div class="settings-panel" data-panel="plugins">
+    <p class="text-muted mb-2">Each plugin contributes pages, dashboard widgets, MCP tools, and background services.</p>
+
+    @if (!Model.PluginInfos.Any())
+    {
+        <div class="card" style="text-align: center; padding: 3rem;">
+            <h2>No plugins loaded</h2>
+            <p class="text-muted mt-1">Add a plugin project reference to <code>Promptile.Host.csproj</code> and register it in <code>Program.cs</code>.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var info in Model.PluginInfos)
+        {
+            <div class="card mb-2 plugin-card @(!info.Enabled ? "plugin-disabled" : "")">
+                <div class="plugin-card-header">
+                    <span class="plugin-card-icon">@info.Plugin.Icon</span>
+                    <div>
+                        <h2 style="margin:0">@info.Plugin.DisplayName</h2>
+                        <span class="text-sm text-muted">@info.Plugin.Id</span>
+                    </div>
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:0.75rem;">
+                        @if (info.Status != null && info.Enabled)
+                        {
+                            <span class="pill pill-neutral">@info.Status.Label</span>
+                        }
+                        <form method="post" style="margin:0">
+                            <input type="hidden" name="pluginId" value="@info.Plugin.Id" />
+                            <button type="submit" asp-page-handler="TogglePlugin"
+                                    class="toggle-btn @(info.Enabled ? "toggle-on" : "toggle-off")">
+                                @(info.Enabled ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                @if (info.Enabled)
+                {
+                    <div class="plugin-summary">
+                        <div class="plugin-summary-group">
+                            <span class="plugin-summary-label">Pages</span>
+                            @foreach (var nav in info.NavItems.OrderBy(n => n.Order))
+                            {
+                                <a href="@nav.Href" class="plugin-feature-tag">@nav.Label</a>
+                            }
+                        </div>
+                        <div class="plugin-summary-group">
+                            <span class="plugin-summary-label">Capabilities</span>
+                            @if (info.IsCaptureTarget) { <span class="plugin-feature-tag">Capture</span> }
+                            @if (info.Plugin is Promptile.Sdk.ITrayStatusProvider) { <span class="plugin-feature-tag">Tray Status</span> }
+                            @{ var bgCount = info.Plugin.GetBackgroundServices().Count; }
+                            @if (bgCount > 0) { <span class="plugin-feature-tag">@bgCount Bg Services</span> }
+                            @if (info.Widgets.Any()) { <span class="plugin-feature-tag">@info.Widgets.Count Widget@(info.Widgets.Count != 1 ? "s" : "")</span> }
+                        </div>
+                    </div>
+
+                    @if (info.McpTools.Any() || info.AccessibleTools.Any())
+                    {
+                        <div id="tools-columns-@info.Plugin.Id">
+                            @await Html.PartialAsync("Shared/_PluginToolsColumns", info)
+                        </div>
+                    }
+                }
+            </div>
+        }
+    }
+</div>
+
+<!-- Agents -->
+<div class="settings-panel" data-panel="providers">
+    <form method="post" asp-page-handler="SaveAgents" class="card mb-2">
+        <h2>Providers</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Three tiers used for tasks of different complexity. Light runs most often (widgets, quick lookups); Medium handles balanced tasks (summaries, chat); Heavy powers deep analysis (briefings, work jobs).</p>
+        @foreach (var tier in new[] { "Light", "Medium", "Heavy" })
+        {
+            var t = tier.ToLower();
+            var tSettings = tier == "Light" ? Model.Settings.Light : tier == "Medium" ? Model.Settings.Medium : Model.Settings.Heavy;
+            <div class="mb-3" style="border:1px solid var(--border); border-radius:6px; padding:1rem">
+                <div style="font-weight:600; margin-bottom:0.75rem">@tier</div>
+                <div class="flex gap-1 items-end" style="flex-wrap:wrap">
+                    <div>
+                        <label class="text-sm text-muted">Provider</label>
+                        <select name="@(t)_provider" style="width:auto" onchange="toggleTierFields(this)">
+                            @foreach (var p in new[] { ("claude-cli","Claude CLI"), ("claude-api","Claude API"), ("openai","OpenAI"), ("ollama","Ollama"), ("lmstudio","LM Studio") })
+                            {
+                                <option value="@p.Item1" selected="@(p.Item1 == tSettings.Provider ? "selected" : null)">@p.Item2</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-muted">Model</label>
+                        <input type="text" name="@(t)_model" value="@tSettings.Model"
+                               placeholder="@(tSettings.Provider == "openai" ? "gpt-4o" : tSettings.Provider == "ollama" ? "llama3" : "default")"
+                               style="width:180px" />
+                    </div>
+                    <div class="tier-apikey" style="@(tSettings.Provider is "claude-api" or "openai" ? "" : "display:none")">
+                        <label class="text-sm text-muted">API Key</label>
+                        <input type="password" name="@(t)_apiKey" value="@tSettings.ApiKey"
+                               placeholder="sk-..." style="font-family:monospace; width:200px" autocomplete="new-password" />
+                    </div>
+                    <div class="tier-baseurl" style="@(tSettings.Provider is "ollama" or "lmstudio" ? "" : "display:none")">
+                        <label class="text-sm text-muted">Base URL</label>
+                        <input type="text" name="@(t)_baseUrl" value="@tSettings.BaseUrl"
+                               placeholder="@(tSettings.Provider == "lmstudio" ? "http://localhost:1234" : "http://localhost:11434")"
+                               style="width:220px" />
+                    </div>
+                    <div class="tier-thinking" style="@(tSettings.Provider is "ollama" or "lmstudio" ? "" : "display:none")">
+                        <label class="text-sm text-muted" style="display:flex;align-items:center;gap:0.4rem;cursor:pointer">
+                            <input type="checkbox" name="@(t)_thinking" value="true" @(tSettings.Thinking ? "checked" : "") />
+                            Enable thinking mode
+                        </label>
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.AgentsMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.AgentsMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+    <form method="post" asp-page-handler="SaveEmbedding" class="card mb-2">
+        <h2>Semantic Search</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Configure a local embedding endpoint (LM Studio or any OpenAI-compatible server) to enable the <code>store_search</code> MCP tool. Embeddings are indexed locally in <code>~/.assistant/embeddings.db</code>.</p>
+        <div class="flex gap-1 mb-2" style="flex-wrap:wrap; align-items:flex-end">
+            <div style="flex:1; min-width:200px">
+                <label class="text-sm text-muted">Embedding base URL</label>
+                <input type="text" name="EmbeddingBaseUrl" value="@Model.Settings.EmbeddingBaseUrl"
+                       placeholder="http://127.0.0.1:1234" style="font-family:monospace" />
+            </div>
+            <div style="flex:1; min-width:160px">
+                <label class="text-sm text-muted">Model (optional)</label>
+                <input type="text" name="EmbeddingModel" value="@Model.Settings.EmbeddingModel"
+                       placeholder="text-embedding-ada-002" />
+            </div>
+        </div>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.EmbeddingMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.EmbeddingMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<!-- Agents -->
+<div class="settings-panel" data-panel="agents">
+    <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <div>
+                <h2>Agents</h2>
+                <p class="text-sm text-muted mt-1">Named agentic tool configurations (opencode, Claude Code) used for folder-based tasks.</p>
+            </div>
+            <button type="button" onclick="showAgentForm()">+ Add Agent</button>
+        </div>
+
+        <div id="agent-list">
+            @foreach (var agent in Model.Agents)
+            {
+                <div class="agent-row" style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+                    <span style="font-weight:600;flex:1">@agent.Name</span>
+                    <span class="text-sm text-muted" style="min-width:90px">@(agent.Type == "claude-code" ? "Claude Code" : "opencode")</span>
+                    <span class="text-sm text-muted" style="min-width:120px">@(string.IsNullOrEmpty(agent.Model) ? "default model" : agent.Model)</span>
+                    <button type="button" class="widget-btn" onclick="editAgent('@agent.Id','@agent.Name','@agent.Type','@agent.Provider','@agent.Model','@(agent.BaseUrl ?? "")','@(agent.CommandPath ?? "")')">Edit</button>
+                    <button type="button" class="widget-btn danger" onclick="deleteAgent('@agent.Id')">Delete</button>
+                </div>
+            }
+            @if (!Model.Agents.Any())
+            {
+                <p class="text-sm text-muted">No agents configured yet.</p>
+            }
+        </div>
+
+        <div id="agent-form" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border)">
+            <input type="hidden" id="agent-id" />
+            <div class="flex gap-1 mb-2" style="flex-wrap:wrap;align-items:flex-end">
+                <div style="flex:1;min-width:160px">
+                    <label class="text-sm text-muted">Name</label>
+                    <input type="text" id="agent-name" placeholder="e.g. opencode/Claude" />
+                </div>
+                <div>
+                    <label class="text-sm text-muted">Type</label>
+                    <select id="agent-type" onchange="onAgentTypeChange()">
+                        <option value="opencode">opencode</option>
+                        <option value="claude-code">Claude Code</option>
+                    </select>
+                </div>
+            </div>
+            <div id="agent-provider-row" class="flex gap-1 mb-2" style="flex-wrap:wrap;align-items:flex-end">
+                <div>
+                    <label class="text-sm text-muted">Provider</label>
+                    <select id="agent-provider" onchange="onAgentProviderChange()">
+                        <option value="anthropic">Anthropic</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="ollama">Ollama</option>
+                        <option value="lmstudio">LM Studio</option>
+                    </select>
+                </div>
+                <div style="flex:1;min-width:140px">
+                    <label class="text-sm text-muted">Model</label>
+                    <input type="text" id="agent-model" placeholder="e.g. claude-sonnet-4-5" />
+                </div>
+                <div id="agent-apikey-wrap">
+                    <label class="text-sm text-muted">API Key</label>
+                    <input type="password" id="agent-apikey" placeholder="sk-..." style="font-family:monospace;width:180px" autocomplete="new-password" />
+                </div>
+                <div id="agent-baseurl-wrap" style="display:none">
+                    <label class="text-sm text-muted">Base URL</label>
+                    <input type="text" id="agent-baseurl" placeholder="http://localhost:1234" style="width:200px" />
+                </div>
+            </div>
+            <div class="mb-2">
+                <label class="text-sm text-muted">Command path <span style="opacity:0.6">(optional — overrides PATH lookup)</span></label>
+                <input type="text" id="agent-cmdpath" placeholder="/usr/local/bin/opencode" style="width:260px" />
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+                <button type="button" onclick="saveAgent()">Save</button>
+                <button type="button" class="secondary" onclick="document.getElementById('agent-form').style.display='none'">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Automation -->
+<div class="settings-panel" data-panel="automation">
+    <div class="card mb-2">
+        <h2>Scheduled Jobs</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Intelligence runs that fire automatically at a set time. Output is written to the information store under <code>_Assistant/Scheduled/{slug}/</code>.</p>
+        @if (!string.IsNullOrEmpty(Model.SchedulerMessage))
+        {
+            <p class="text-sm" style="color:var(--success); margin-bottom:0.5rem">@Model.SchedulerMessage</p>
+        }
+        @if (Model.Settings.ScheduledJobs.Any())
+        {
+            <table style="width:100%; font-size:0.82rem; border-collapse:collapse; margin-bottom:1rem">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border); color:var(--text-muted)">
+                        <th style="text-align:left; padding:0.3rem 0.5rem">Name</th>
+                        <th style="text-align:left; padding:0.3rem 0.5rem">Time</th>
+                        <th style="text-align:left; padding:0.3rem 0.5rem">Tier</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var job in Model.Settings.ScheduledJobs)
+                    {
+                        var day = job.DayOfWeek.HasValue ? ((DayOfWeek)job.DayOfWeek.Value).ToString() : "Daily";
+                        <tr style="border-bottom:1px solid var(--border)">
+                            <td style="padding:0.4rem 0.5rem">@job.Name</td>
+                            <td style="padding:0.4rem 0.5rem">@($"{job.Hour:D2}:00") · @day</td>
+                            <td style="padding:0.4rem 0.5rem">@job.Tier</td>
+                            <td style="padding:0.4rem 0.5rem; text-align:right">
+                                <form method="post" asp-page-handler="DeleteJob" style="display:inline">
+                                    <input type="hidden" name="slug" value="@job.Slug" />
+                                    <button class="secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem"
+                                        onclick="return confirm('Remove this job?')">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <details style="margin-top:0.5rem">
+            <summary style="cursor:pointer; font-size:0.85rem; color:var(--text-muted); user-select:none">+ Add job</summary>
+            <form method="post" asp-page-handler="AddJob" style="margin-top:0.75rem">
+                <div class="flex gap-1" style="flex-wrap:wrap; align-items:flex-end">
+                    <div>
+                        <label class="text-sm text-muted">Name</label>
+                        <input type="text" name="JobName" placeholder="Morning Brief" style="width:140px" required />
+                    </div>
+                    <div>
+                        <label class="text-sm text-muted">Hour (0–23)</label>
+                        <input type="number" name="JobHour" min="0" max="23" value="7" style="width:70px" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-muted">Day</label>
+                        <select name="JobDayOfWeek" style="width:auto">
+                            <option value="">Daily</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-muted">Tier</label>
+                        <select name="JobTier" style="width:auto">
+                            <option value="heavy">Heavy</option>
+                            <option value="medium">Medium</option>
+                            <option value="light">Light</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <label class="text-sm text-muted">Prompt template (supports {date}, {dayOfWeek})</label>
+                    <textarea name="JobPrompt" rows="3"
+                              style="width:100%; font-size:0.82rem; font-family:monospace; resize:vertical; margin-top:0.25rem"
+                              placeholder="Write a {dayOfWeek} summary of this week's key developments and upcoming priorities."></textarea>
+                </div>
+                <div class="flex justify-end mt-2">
+                    <button type="submit">Add Job</button>
+                </div>
+            </form>
+        </details>
+    </div>
+
+    <form method="post" asp-page-handler="SaveMemory" class="card mb-2">
+        <h2>Memory</h2>
+        <p class="text-sm text-muted mt-1 mb-3">
+            Memory pages are configured in <a href="/Memory">Memory</a>.
+            Set the scan interval here.
+        </p>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+            <label class="text-sm text-muted" style="white-space:nowrap">Scan interval (minutes)</label>
+            <input type="number" name="MemoryScanIntervalMinutes" value="@Model.Settings.MemoryScanIntervalMinutes"
+                   min="1" max="1440" style="max-width:100px" />
+        </div>
+        <div class="flex justify-end mt-2">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+    <form method="post" asp-page-handler="SaveWatchlist" class="card mb-2">
+        <h2>Watchlist</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Keywords or <code>/regex/</code> patterns to watch for in synced data. One per line. Matching triggers an immediate tray notification.</p>
+        <textarea name="Watchlist" rows="5"
+                  style="width:100%; font-size:0.85rem; font-family:monospace; resize:vertical"
+                  placeholder="Alex Johnson&#10;/acquisition|merger/&#10;your-company-name">@string.Join("\n", Model.Settings.Watchlist)</textarea>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.WatchlistMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.WatchlistMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+    <form method="post" asp-page-handler="SaveNotifications" class="card mb-2">
+        <h2>Notifications</h2>
+        <div class="mt-2">
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer">
+                <input type="checkbox" name="NotifyOnJobCompletion" value="true"
+                       @(Model.Settings.NotifyOnJobCompletion ? "checked" : "") />
+                Notify when a Work job finishes
+            </label>
+        </div>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.NotificationsMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.NotificationsMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+    <form method="post" asp-page-handler="SaveDigest" class="card mb-2">
+        <h2>Daily Digest</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Automatically compose a digest from the brief, situations, and actions each day. View digests at <a href="/Digests">/Digests</a>.</p>
+        <div class="mb-2">
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.9rem">
+                <input type="checkbox" name="DigestEnabled" value="true" @(Model.Settings.Digest.Enabled ? "checked" : "") />
+                Enable daily digest
+            </label>
+        </div>
+        <div class="flex gap-1 mb-2" style="flex-wrap:wrap; align-items:flex-end">
+            <div>
+                <label class="text-sm text-muted">Generate at hour (0–23)</label>
+                <input type="number" name="DigestHour" min="0" max="23" value="@Model.Settings.Digest.Hour" style="width:70px" />
+            </div>
+            <div>
+                <label class="text-sm text-muted">Send to email (optional)</label>
+                <input type="email" name="DigestToEmail" value="@Model.Settings.Digest.ToEmail"
+                       placeholder="you@example.com" style="width:200px" />
+            </div>
+        </div>
+        <details style="margin-bottom:0.75rem">
+            <summary style="cursor:pointer; font-size:0.82rem; color:var(--text-muted); user-select:none">SMTP settings (for email delivery)</summary>
+            <div class="flex gap-1 mt-2" style="flex-wrap:wrap; align-items:flex-end">
+                <div>
+                    <label class="text-sm text-muted">SMTP host</label>
+                    <input type="text" name="DigestSmtpHost" value="@Model.Settings.Digest.SmtpHost"
+                           placeholder="smtp.gmail.com" style="width:180px" />
+                </div>
+                <div>
+                    <label class="text-sm text-muted">Port</label>
+                    <input type="number" name="DigestSmtpPort" value="@Model.Settings.Digest.SmtpPort" style="width:70px" />
+                </div>
+                <div>
+                    <label class="text-sm text-muted">Username</label>
+                    <input type="text" name="DigestSmtpUser" value="@Model.Settings.Digest.SmtpUser"
+                           style="width:180px" autocomplete="off" />
+                </div>
+                <div>
+                    <label class="text-sm text-muted">Password</label>
+                    <input type="password" name="DigestSmtpPassword" placeholder="(unchanged)"
+                           style="width:160px" autocomplete="new-password" />
+                </div>
+            </div>
+        </details>
+        <div class="flex justify-between items-center">
+            @if (!string.IsNullOrEmpty(Model.DigestMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.DigestMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<!-- Integrations -->
+<div class="settings-panel" data-panel="integrations">
+    <form method="post" asp-page-handler="SaveGoogle" class="card mb-2">
+        <h2>Google</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Required for Gmail data sources. Create a Desktop OAuth app at <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> → APIs &amp; Services → Credentials.</p>
+        <div class="mb-3">
+            <label class="text-sm text-muted">Client ID</label>
+            <input type="text" name="GoogleClientId" value="@Model.GoogleClientId"
+                   placeholder="123456789-abc.apps.googleusercontent.com" style="font-family:monospace" />
+        </div>
+        <div class="mb-3">
+            <label class="text-sm text-muted">Client Secret</label>
+            <input type="password" name="GoogleClientSecret" value="@Model.GoogleClientSecret"
+                   placeholder="GOCSPX-..." style="font-family:monospace" />
+        </div>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.GoogleMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.GoogleMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+
+<!-- System -->
+<div class="settings-panel" data-panel="system">
+    <form method="post" asp-page-handler="SaveStore" class="card mb-2">
+        <h2>Information Store</h2>
+        <p class="text-sm text-muted mt-1 mb-3">Where the assistant stores notes, summaries, and collected data. Point this at a Dropbox or iCloud folder to sync across devices.</p>
+        <div class="mb-3">
+            <label class="text-sm text-muted">Storage path</label>
+            <input type="text" name="InformationStorePath" value="@Model.Settings.InformationStorePath"
+                   placeholder="~/Documents/Assistant" style="font-family:monospace" />
+        </div>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.StoreMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.StoreMessage</span> }
+            else { <span></span> }
+            <div class="flex gap-1">
+                <button type="button" onclick="openStore()" class="secondary">Open in Finder</button>
+                <button type="submit">Save</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="card mb-2">
+        <h2>Appearance</h2>
+        <div class="flex gap-1 mt-1">
+            <button id="theme-light" class="secondary" onclick="setTheme('light')">Light</button>
+            <button id="theme-dark" class="secondary" onclick="setTheme('dark')">Dark</button>
+        </div>
+    </div>
+
+    <div class="card mb-2">
+        <h2>Installed Plugins</h2>
+        <div class="text-sm">
+            @inject PluginRegistry PluginRegistry
+            @if (PluginRegistry.Plugins.Any())
+            {
+                @foreach (var plugin in PluginRegistry.Plugins)
+                {
+                    <div class="flex items-center gap-1 mt-1">
+                        <span style="font-size:1.2em">@plugin.Icon</span>
+                        <strong>@plugin.DisplayName</strong>
+                        <span class="text-muted">(@plugin.Id)</span>
+                        <span class="text-muted">— @plugin.GetNavItems().Count pages, @plugin.GetDashboardWidgets().Count widgets, @plugin.GetMcpToolTypes().Count MCP tools</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <span class="text-muted">No plugins loaded</span>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-2">
+        <h2>Status</h2>
+        <div class="text-sm">
+            <div>Settings file: <code>~/.assistant/settings.json</code></div>
+            <div>Logs: <code>~/.assistant/logs/</code></div>
+            <div class="mt-1">
+                Claude CLI available:
+                @if (Model.ClaudeCliAvailable)
+                { <span style="color:var(--success)">Yes</span> }
+                else
+                { <span style="color:var(--danger)">No — install Claude Code CLI</span> }
+            </div>
+            <div>
+                ANTHROPIC_API_KEY env var:
+                @if (Model.ApiKeyEnvSet)
+                { <span style="color:var(--success)">Set</span> }
+                else
+                { <span class="text-muted">Not set</span> }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Security -->
+<div class="settings-panel" data-panel="security">
+    <form method="post" asp-page-handler="SaveHiddenNames" class="card mb-2">
+        <h2>Hidden Names</h2>
+        <p class="text-sm text-muted mt-1 mb-3">
+            Names listed here are completely invisible across all pages — data sources, dashboard widgets,
+            tasks, briefings, and plugin content that match are hidden as if they don't exist.
+            This page is the only place where they remain visible so you can manage them.
+            One name per line, case-insensitive.
+        </p>
+        <textarea name="HiddenNames" rows="8"
+                  style="width:100%; font-size:0.85rem; font-family:monospace; resize:vertical"
+                  placeholder="Job1&#10;MyCompany&#10;work-slack">@string.Join("\n", Model.Settings.HiddenNames)</textarea>
+        <div class="flex justify-between items-center mt-2">
+            @if (!string.IsNullOrEmpty(Model.SecurityMessage))
+            { <span class="text-sm" style="color:var(--success)">@Model.SecurityMessage</span> }
+            else { <span></span> }
+            <button type="submit">Save</button>
+        </div>
+    </form>
+
+    @if (Model.Settings.HiddenNames.Any())
+    {
+        <div class="card mb-2">
+            <h2>Currently Hidden</h2>
+            <p class="text-sm text-muted mt-1 mb-2">These names are suppressed everywhere except this tab.</p>
+            <div style="display:flex; flex-wrap:wrap; gap:0.4rem">
+                @foreach (var name in Model.Settings.HiddenNames)
+                {
+                    <span class="badge" style="background:var(--badge-danger-bg); color:var(--badge-danger-fg); border-color:var(--badge-danger-border); font-family:monospace">@name</span>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+function openStore() { fetch('/api/store/open', { method: 'POST' }); }
+
+function setTheme(t) {
+    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('tray-theme', t);
+    updateThemeButtons();
+}
+function updateThemeButtons() {
+    var t = localStorage.getItem('tray-theme') || 'light';
+    document.getElementById('theme-light').className = t === 'light' ? 'button' : 'secondary button';
+    document.getElementById('theme-dark').className  = t === 'dark'  ? 'button' : 'secondary button';
+}
+updateThemeButtons();
+
+
+function showAgentForm(id,name,type,provider,model,baseUrl,cmdPath) {
+    id = id || ''; name = name || ''; type = type || 'opencode';
+    provider = provider || 'anthropic'; model = model || '';
+    baseUrl = baseUrl || ''; cmdPath = cmdPath || '';
+    document.getElementById('agent-id').value = id;
+    document.getElementById('agent-name').value = name;
+    document.getElementById('agent-type').value = type;
+    document.getElementById('agent-provider').value = provider;
+    document.getElementById('agent-model').value = model;
+    document.getElementById('agent-baseurl').value = baseUrl;
+    document.getElementById('agent-cmdpath').value = cmdPath;
+    onAgentTypeChange();
+    onAgentProviderChange();
+    document.getElementById('agent-form').style.display = '';
+    document.getElementById('agent-name').focus();
+}
+function editAgent(id,name,type,provider,model,baseUrl,cmdPath) {
+    showAgentForm(id,name,type,provider,model,baseUrl,cmdPath);
+}
+function onAgentTypeChange() {
+    var t = document.getElementById('agent-type').value;
+    document.getElementById('agent-provider-row').style.display = t === 'opencode' ? '' : 'none';
+}
+function onAgentProviderChange() {
+    var p = document.getElementById('agent-provider').value;
+    document.getElementById('agent-apikey-wrap').style.display = (p === 'anthropic' || p === 'openai') ? '' : 'none';
+    document.getElementById('agent-baseurl-wrap').style.display = (p === 'ollama' || p === 'lmstudio') ? '' : 'none';
+}
+async function saveAgent() {
+    var type = document.getElementById('agent-type').value;
+    var payload = {
+        id: document.getElementById('agent-id').value,
+        name: document.getElementById('agent-name').value.trim(),
+        type: type,
+        provider: type === 'opencode' ? document.getElementById('agent-provider').value : '',
+        model: document.getElementById('agent-model').value.trim(),
+        apiKey: document.getElementById('agent-apikey').value || null,
+        baseUrl: document.getElementById('agent-baseurl').value.trim() || null,
+        commandPath: document.getElementById('agent-cmdpath').value.trim() || null,
+    };
+    if (!payload.name) { alert('Name is required'); return; }
+    await fetch('/api/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    location.reload();
+}
+async function deleteAgent(id) {
+    if (!confirm('Remove this agent?')) return;
+    await fetch('/api/agents/' + id, { method: 'DELETE' });
+    location.reload();
+}
+
+function toggleTierFields(sel) {
+    var row = sel.closest('.mb-3');
+    var needsKey = sel.value === 'claude-api' || sel.value === 'openai';
+    var needsUrl = sel.value === 'ollama' || sel.value === 'lmstudio';
+    row.querySelector('.tier-apikey').style.display  = needsKey ? '' : 'none';
+    row.querySelector('.tier-baseurl').style.display = needsUrl ? '' : 'none';
+    row.querySelector('.tier-thinking').style.display = needsUrl ? '' : 'none';
+}
+
+// Tab switching
+function showTab(name) {
+    document.querySelectorAll('.settings-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.settings-panel').forEach(p =>
+        p.classList.toggle('active', p.dataset.panel === name));
+    location.hash = name;
+}
+
+(function() {
+    var tabs = ['profile', 'sources', 'plugins', 'providers', 'agents', 'automation', 'integrations', 'system', 'security'];
+
+    // Prefer query param (used by redirect after source actions), then hash
+    var urlParams = new URLSearchParams(window.location.search);
+    var hash = urlParams.get('tab') || location.hash.replace('#', '');
+
+    // If a form just saved, go back to the right tab
+    @if (!string.IsNullOrEmpty(Model.ProfileMessage) || !string.IsNullOrEmpty(Model.ChatPromptMessage))
+    { <text>hash = hash || 'profile';</text> }
+    @if (!string.IsNullOrEmpty(Model.AgentsMessage) || !string.IsNullOrEmpty(Model.EmbeddingMessage))
+    { <text>hash = hash || 'providers';</text> }
+    @if (!string.IsNullOrEmpty(Model.SchedulerMessage) || !string.IsNullOrEmpty(Model.WatchlistMessage) || !string.IsNullOrEmpty(Model.NotificationsMessage) || !string.IsNullOrEmpty(Model.DigestMessage))
+    { <text>hash = hash || 'automation';</text> }
+    @if (!string.IsNullOrEmpty(Model.GoogleMessage))
+    { <text>hash = hash || 'integrations';</text> }
+    @if (!string.IsNullOrEmpty(Model.StoreMessage))
+    { <text>hash = hash || 'system';</text> }
+    @if (!string.IsNullOrEmpty(Model.SecurityMessage))
+    { <text>hash = hash || 'security';</text> }
+
+    showTab(tabs.includes(hash) ? hash : 'profile');
+
+    document.querySelectorAll('.settings-tab').forEach(t =>
+        t.addEventListener('click', () => showTab(t.dataset.tab)));
+})();
+
+document.querySelectorAll('.plugin-tools-scroll').forEach(function(el) {
+    var wrap = el.closest('.plugin-tools-scroll-wrap');
+    if (!wrap) return;
+    function check() {
+        var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
+        wrap.classList.toggle('scrolled-bottom', atBottom || el.scrollHeight <= el.clientHeight);
+    }
+    el.addEventListener('scroll', check);
+    check();
+});
+</script>

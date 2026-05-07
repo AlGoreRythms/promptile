@@ -1,4 +1,4 @@
-using Assistant.Sdk;
+using Promptile.Sdk;
 using Slack.Mcp;
 
 namespace Slack;

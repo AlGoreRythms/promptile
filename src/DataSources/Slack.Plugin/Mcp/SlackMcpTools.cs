@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
-using Assistant.Sdk;
+using Promptile.Sdk;
 using ModelContextProtocol.Server;
 
 namespace Slack.Mcp;

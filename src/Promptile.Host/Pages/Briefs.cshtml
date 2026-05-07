@@ -1,0 +1,371 @@
+@page
+@model Promptile.Host.Pages.BriefsModel
+@{
+    ViewData["Title"] = "Briefs";
+}
+
+<style>
+.situation-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+.situation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg-card);
+}
+.situation-header:hover { background: var(--bg); }
+.situation-title { font-weight: 600; font-size: 0.95rem; }
+.situation-meta { font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
+.situation-chevron { transition: transform 0.15s; }
+.situation-card.open .situation-chevron { transform: rotate(90deg); }
+.situation-body {
+    display: none;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+}
+.situation-card.open .situation-body { display: block; }
+.situation-body-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+.md-content h1 { font-size: 1.1rem; margin: 0 0 0.75rem; }
+.md-content h2 { font-size: 0.95rem; margin: 1rem 0 0.4rem; color: var(--text); }
+.md-content h3 { font-size: 0.9rem; margin: 0.75rem 0 0.3rem; color: var(--text-muted); }
+.md-content p { margin: 0 0 0.6rem; font-size: 0.88rem; line-height: 1.6; }
+.md-content ul, .md-content ol { margin: 0 0 0.6rem 1.25rem; font-size: 0.88rem; }
+.md-content li { margin-bottom: 0.2rem; }
+.md-content strong { color: var(--text); }
+.md-content em { color: var(--text-muted); }
+.md-content code { font-family: monospace; font-size: 0.82rem; background: var(--bg); padding: 0.1em 0.3em; border-radius: 3px; }
+/* Action items */
+.actions-list { list-style: none; margin: 0 0 1rem; padding: 0; }
+.action-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+}
+.action-item:last-child { border-bottom: none; }
+.action-item.done { opacity: 0.45; text-decoration: line-through; }
+.action-priority {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15em 0.45em;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.priority-high { background: #fee2e2; color: #b91c1c; }
+.priority-medium { background: #fef3c7; color: #92400e; }
+.priority-low { background: #e0f2fe; color: #075985; }
+.action-text { flex: 1; }
+.action-deadline { font-size: 0.75rem; color: var(--text-muted); margin-left: 0.25rem; }
+.action-done-btn {
+    flex-shrink: 0; background: none; border: 1px solid var(--border);
+    border-radius: 4px; font-size: 0.72rem; padding: 0.1rem 0.4rem;
+    color: var(--text-muted); cursor: pointer;
+}
+.action-done-btn:hover { border-color: var(--accent); color: var(--accent); background: none; }
+/* Archived section */
+.archived-toggle {
+    font-size: 0.8rem; color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; gap: 0.35rem;
+    margin: 1rem 0 0.5rem; user-select: none;
+}
+.archived-toggle:hover { color: var(--text); }
+.archived-chevron { transition: transform 0.15s; font-style: normal; }
+.archived-open .archived-chevron { transform: rotate(90deg); }
+.archived-cards { display: none; }
+.archived-open + .archived-cards { display: block; }
+.situation-card.archived { opacity: 0.6; }
+/* Brief group */
+.brief-group { margin-bottom: 2.5rem; display: none; }
+.brief-group.active { display: block; }
+.brief-group-name {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-muted);
+    margin-bottom: 1rem; padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+}
+/* History panel */
+.digest-layout { display: flex; gap: 1.5rem; }
+.digest-list { width: 160px; flex-shrink: 0; }
+.digest-item {
+    display: block; padding: 0.4rem 0.6rem; border-radius: 5px;
+    font-size: 0.85rem; color: var(--text-muted); cursor: pointer;
+    border: none; background: none; width: 100%; text-align: left;
+}
+.digest-item:hover { background: var(--bg); color: var(--text); }
+.digest-item.active { background: var(--bg); color: var(--accent); font-weight: 600; }
+.digest-content { flex: 1; min-width: 0; }
+/* Tabs */
+.brief-tabs {
+    display: flex; gap: 0; margin-bottom: 1.75rem;
+    border-bottom: 1px solid var(--border);
+}
+.brief-tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 0.5rem 1.1rem; font-size: 0.9rem; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; margin-bottom: -1px;
+    transition: color 0.1s;
+}
+.brief-tab:hover { color: var(--text); background: none; }
+.brief-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+</style>
+
+<h1 style="margin-bottom:1.25rem">Briefs</h1>
+
+@if (Model.Groups.Count > 1 || Model.Digests.Any())
+{
+    <div class="brief-tabs">
+        @foreach (var group in Model.Groups)
+        {
+            <button class="brief-tab" data-group="@group.Name">@group.Name</button>
+        }
+        @if (Model.Digests.Any())
+        {
+            <button class="brief-tab" data-group="History" style="margin-left:auto">History</button>
+        }
+    </div>
+}
+
+@if (!Model.Groups.Any())
+{
+    <div class="card mb-2">
+        <div style="color:var(--text-muted); font-size:0.9rem; padding:2rem 0; text-align:center">
+            No data sources configured. Add a data source to start receiving briefs.
+        </div>
+    </div>
+}
+
+@foreach (var group in Model.Groups)
+{
+    <div class="brief-group" data-group="@group.Name">
+        <div class="brief-group-name">@group.Name</div>
+
+        @if (group.Actions.Any(a => !a.Done))
+        {
+            <h2 style="font-size:1rem; margin-bottom:0.5rem; color:var(--text-muted)">Actions</h2>
+            <div class="card mb-3">
+                <ul class="actions-list">
+                    @for (int i = 0; i < group.Actions.Count; i++)
+                    {
+                        var action = group.Actions[i];
+                        if (action.Done) continue;
+                        <li class="action-item">
+                            <span class="action-priority priority-@action.Priority.ToLower()">@action.Priority</span>
+                            <span class="action-text">
+                                @action.Text
+                                @if (!string.IsNullOrWhiteSpace(action.Deadline))
+                                {
+                                    <span class="action-deadline">· due @action.Deadline</span>
+                                }
+                            </span>
+                            <form method="post" asp-page-handler="ActionDone" style="display:inline">
+                                <input type="hidden" name="briefName" value="@group.Name" />
+                                <input type="hidden" name="index" value="@i" />
+                                <button class="action-done-btn" type="submit">Done</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <h2 style="font-size:1rem; margin-bottom:0.75rem; color:var(--text-muted)">Situations</h2>
+
+        @if (!group.Situations.Any())
+        {
+            <div class="card mb-2">
+                <div style="color:var(--text-muted); font-size:0.9rem; padding:2rem 0; text-align:center">
+                    No situational notes yet — the assistant will create them after the next data sync.
+                </div>
+            </div>
+        }
+
+        @foreach (var note in group.Situations)
+        {
+            var ago = TimeAgo(note.Updated);
+            <div class="situation-card" onclick="toggleSituation(this)">
+                <div class="situation-header">
+                    <span class="situation-title">@note.Title</span>
+                    <span class="situation-meta">
+                        <span>@ago</span>
+                        <span class="situation-chevron">›</span>
+                    </span>
+                </div>
+                <div class="situation-body">
+                    <div class="md-content" data-markdown="@Html.Raw(System.Web.HttpUtility.HtmlAttributeEncode(note.Markdown))"></div>
+                    <div class="situation-body-footer" onclick="event.stopPropagation()">
+                        @if (group.PromotedSlugs.Contains(note.Slug))
+                        {
+                            <span style="font-size:0.75rem; color:var(--success); padding:0.2rem 0.4rem">In TODO ✓</span>
+                        }
+                        else
+                        {
+                            <form method="post" asp-page-handler="AddSituationToTodo" style="display:inline">
+                                <input type="hidden" name="briefName" value="@group.Name" />
+                                <input type="hidden" name="slug" value="@note.Slug" />
+                                <button class="secondary" type="submit"
+                                        style="font-size:0.75rem; padding:0.2rem 0.6rem">
+                                    → Add to TODO
+                                </button>
+                            </form>
+                        }
+                        <form method="post" asp-page-handler="ArchiveSituation" style="display:inline">
+                            <input type="hidden" name="briefName" value="@group.Name" />
+                            <input type="hidden" name="slug" value="@note.Slug" />
+                            <button class="secondary" type="submit"
+                                    style="font-size:0.75rem; padding:0.2rem 0.6rem; color:var(--text-muted)"
+                                    onclick="return confirm('Archive this situation?')">
+                                Archive
+                            </button>
+                        </form>
+                        <button class="secondary" style="font-size:0.75rem; padding:0.2rem 0.6rem"
+                            onclick="askAbout('@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(note.Title))', this.closest('.situation-card').querySelector('.md-content')?.innerText || '')">
+                            Ask ›
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (group.ArchivedSituations.Any())
+        {
+            <div class="archived-toggle" onclick="this.classList.toggle('archived-open')">
+                <em class="archived-chevron">›</em>
+                <span>@group.ArchivedSituations.Count archived situation@(group.ArchivedSituations.Count != 1 ? "s" : "")</span>
+            </div>
+            <div class="archived-cards">
+                @foreach (var note in group.ArchivedSituations)
+                {
+                    var ago = TimeAgo(note.Updated);
+                    <div class="situation-card archived" onclick="toggleSituation(this)">
+                        <div class="situation-header">
+                            <span class="situation-title">@note.Title</span>
+                            <span class="situation-meta">
+                                <span>archived @ago</span>
+                                <span class="situation-chevron">›</span>
+                            </span>
+                        </div>
+                        <div class="situation-body">
+                            <div class="md-content" data-markdown="@Html.Raw(System.Web.HttpUtility.HtmlAttributeEncode(note.Markdown))"></div>
+                            <div class="situation-body-footer" onclick="event.stopPropagation()">
+                                <form method="post" asp-page-handler="RestoreSituation" style="display:inline">
+                                    <input type="hidden" name="briefName" value="@group.Name" />
+                                    <input type="hidden" name="slug" value="@note.Slug" />
+                                    <button class="secondary" type="submit"
+                                            style="font-size:0.75rem; padding:0.2rem 0.6rem">
+                                        Restore
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@if (Model.Digests.Any())
+{
+    <div class="brief-group" data-group="History">
+        <div class="digest-layout">
+            <div class="digest-list">
+                @foreach (var (name, label) in Model.Digests)
+                {
+                    <button class="digest-item" data-digest="@name">@label</button>
+                }
+            </div>
+            <div class="digest-content card">
+                <div class="md-content" id="digest-body" style="font-size:0.88rem; line-height:1.6">
+                    <span style="color:var(--text-muted)">Select a date to view.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+function toggleSituation(card) {
+    card.classList.toggle('open');
+}
+
+async function askAbout(title, text) {
+    const resp = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `Tell me more about the "${title}" situation:\n\n${text}` })
+    });
+    const data = await resp.json();
+    if (data.conversationId) window.location.href = `/Chats?conv=${data.conversationId}`;
+}
+
+function activateGroup(name) {
+    document.querySelectorAll('.brief-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.group === name));
+    document.querySelectorAll('.brief-group').forEach(g =>
+        g.classList.toggle('active', g.dataset.group === name));
+    history.replaceState(null, '', '#' + encodeURIComponent(name));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.md-content[data-markdown]').forEach(el => {
+        el.innerHTML = marked.parse(el.dataset.markdown);
+        el.removeAttribute('data-markdown');
+    });
+
+    const tabs = document.querySelectorAll('.brief-tab');
+    tabs.forEach(t => t.addEventListener('click', () => activateGroup(t.dataset.group)));
+
+    // Digest history
+    async function loadDigest(name) {
+        document.querySelectorAll('.digest-item').forEach(d =>
+            d.classList.toggle('active', d.dataset.digest === name));
+        const body = document.getElementById('digest-body');
+        body.innerHTML = '<span style="color:var(--text-muted)">Loading…</span>';
+        const resp = await fetch(`/api/digest/${encodeURIComponent(name)}`);
+        body.innerHTML = resp.ok ? marked.parse(await resp.text()) : '<span style="color:var(--danger)">Failed to load.</span>';
+    }
+    document.querySelectorAll('.digest-item').forEach(d =>
+        d.addEventListener('click', () => loadDigest(d.dataset.digest)));
+    const firstDigest = document.querySelector('.digest-item');
+    if (firstDigest) loadDigest(firstDigest.dataset.digest);
+
+    const firstGroup = document.querySelector('.brief-group');
+    if (firstGroup) {
+        const hash = location.hash ? decodeURIComponent(location.hash.slice(1)) : null;
+        const target = hash && document.querySelector(`.brief-group[data-group="${CSS.escape(hash)}"]`)
+            ? hash
+            : firstGroup.dataset.group;
+        activateGroup(target);
+    }
+});
+</script>
+
+@functions {
+    string TimeAgo(DateTimeOffset updated)
+    {
+        var diff = DateTimeOffset.UtcNow - updated;
+        if (diff.TotalMinutes < 2) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return $"{(int)diff.TotalDays}d ago";
+    }
+}

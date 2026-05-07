@@ -1,6 +1,6 @@
 // This is a minimal example plugin showing how to implement IDataSourceProvider.
 // Copy this as a starting point for a new data source. See CONTRIBUTING.md for the full guide.
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 namespace ExamplePlugin;
 

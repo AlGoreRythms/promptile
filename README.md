@@ -35,8 +35,8 @@ Promptile syncs your external data sources — Slack, Gmail, Calendar, GitHub, L
 ```bash
 git clone https://github.com/AlGoreRythms/Assistant.git
 cd Assistant
-dotnet build Assistant.sln
-dotnet run --project src/Assistant.Host -- serve
+dotnet build Promptile.sln
+dotnet run --project src/Promptile.Host -- serve
 ```
 
 The web UI opens at **http://localhost:5309**. The macOS tray icon appears in the menu bar.
@@ -44,7 +44,7 @@ The web UI opens at **http://localhost:5309**. The macOS tray icon appears in th
 To run without opening a browser window:
 
 ```bash
-dotnet run --project src/Assistant.Host -- serve --no-browser
+dotnet run --project src/Promptile.Host -- serve --no-browser
 ```
 
 ---
@@ -75,7 +75,7 @@ Each source syncs data to `~/Documents/Assistant/` and makes it available to all
 Run Promptile as an MCP server over stdio, exposing all your data to Claude Desktop or any MCP-compatible agent:
 
 ```bash
-dotnet run --project src/Assistant.Host -- mcp
+dotnet run --project src/Promptile.Host -- mcp
 ```
 
 To wire it into **Claude Desktop**, add to your `claude_desktop_config.json`:
@@ -85,7 +85,7 @@ To wire it into **Claude Desktop**, add to your `claude_desktop_config.json`:
   "mcpServers": {
     "promptile": {
       "command": "dotnet",
-      "args": ["run", "--project", "/path/to/Assistant/src/Assistant.Host", "--", "mcp"]
+      "args": ["run", "--project", "/path/to/Assistant/src/Promptile.Host", "--", "mcp"]
     }
   }
 }
@@ -98,9 +98,9 @@ Claude will then have access to `store_read_data`, `store_list_sources`, and all
 ## Architecture
 
 ```
-Assistant.sln
-├── src/Assistant.Sdk/          Plugin contracts and shared abstractions
-├── src/Assistant.Host/         Executable: web server, tray icon, AI services
+Promptile.sln
+├── src/Promptile.Sdk/          Plugin contracts and shared abstractions
+├── src/Promptile.Host/         Executable: web server, tray icon, AI services
 │   ├── Pages/                  Razor Pages (Dashboard, Chats, Work, Memory, …)
 │   ├── Services/               Background services, AI, settings, MCP executor
 │   └── Mcp/                    Built-in MCP tool implementations
@@ -122,7 +122,7 @@ Plugins are compiled into the binary (no dynamic loading). Adding a new plugin i
 
 ## Configuration
 
-All settings are stored in `~/.assistant/settings.json` and editable through the **Settings** page in the web UI. Key options:
+All settings are stored in `~/.promptile/settings.json` and editable through the **Settings** page in the web UI. Key options:
 
 | Setting | Purpose |
 |---------|---------|

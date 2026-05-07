@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Assistant.Sdk;
+using Promptile.Sdk;
 using Microsoft.Extensions.Logging;
 
 namespace Slack;
@@ -44,7 +44,7 @@ public class SlackDataSourceInstance : IDataSourceInstance
         _stateDir = Config.Config.TryGetValue("stateDir", out var sd) ? sd
             : Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".assistant", "datasources", Id);
+                ".promptile", "datasources", Id);
         Directory.CreateDirectory(_stateDir);
 
         var token = Config.Config.TryGetValue("botToken", out var t) ? t : "";

@@ -11,20 +11,20 @@ Thank you for your interest in contributing. This document covers development se
 ```bash
 git clone https://github.com/AlGoreRythms/Assistant.git
 cd Assistant
-dotnet build Assistant.sln
+dotnet build Promptile.sln
 ```
 
 **Run in serve mode** (web UI + macOS tray):
 ```bash
-dotnet run --project src/Assistant.Host -- serve
+dotnet run --project src/Promptile.Host -- serve
 ```
 
 **Run in MCP mode** (stdio transport):
 ```bash
-dotnet run --project src/Assistant.Host -- mcp
+dotnet run --project src/Promptile.Host -- mcp
 ```
 
-The web UI is at `http://localhost:5309`. Runtime data is stored in `~/.assistant/`.
+The web UI is at `http://localhost:5309`. Runtime data is stored in `~/.promptile/`.
 
 ---
 
@@ -32,8 +32,8 @@ The web UI is at `http://localhost:5309`. Runtime data is stored in `~/.assistan
 
 ```
 src/
-  Assistant.Sdk/          Plugin contracts — all interfaces a plugin depends on
-  Assistant.Host/         Executable host: web server, tray, AI, MCP server
+  Promptile.Sdk/          Plugin contracts — all interfaces a plugin depends on
+  Promptile.Host/         Executable host: web server, tray, AI, MCP server
     Pages/                Razor Pages (Dashboard, Chats, Work, Memory, Settings…)
     Services/             DI services: AI, settings, notifications, sync, jobs
     Mcp/                  Built-in MCP tools (information store, memory)
@@ -59,16 +59,16 @@ cd src/DataSources/MySource.Plugin
 dotnet new classlib -n MySource.Plugin --framework net9.0
 ```
 
-Add a project reference to `Assistant.Sdk`:
+Add a project reference to `Promptile.Sdk`:
 
 ```xml
 <!-- MySource.Plugin.csproj -->
 <ItemGroup>
-  <ProjectReference Include="..\..\Assistant.Sdk\Assistant.Sdk.csproj" />
+  <ProjectReference Include="..\..\Promptile.Sdk\Promptile.Sdk.csproj" />
 </ItemGroup>
 ```
 
-Add the project to `Assistant.sln`:
+Add the project to `Promptile.sln`:
 ```bash
 dotnet sln ../../.. add MySource.Plugin.csproj
 ```
@@ -78,7 +78,7 @@ dotnet sln ../../.. add MySource.Plugin.csproj
 The provider describes the plugin and creates instances from saved configuration.
 
 ```csharp
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 public class MySourceDataSourceProvider : IDataSourceProvider
 {
@@ -111,7 +111,7 @@ public class MySourceDataSourceProvider : IDataSourceProvider
 The instance runs the sync loop and pushes notifications.
 
 ```csharp
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 public class MySourceDataSourceInstance : IDataSourceInstance
 {
@@ -131,7 +131,7 @@ public class MySourceDataSourceInstance : IDataSourceInstance
         Config = config;
         _stateDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".assistant", "datasources", config.Id);
+            ".promptile", "datasources", config.Id);
         Directory.CreateDirectory(_stateDir);
     }
 
@@ -190,7 +190,7 @@ public class MySourceDataSourceInstance : IDataSourceInstance
 
 ### 4. Register the provider
 
-In `src/Assistant.Host/Program.cs`, add your provider to the `dataSourceProviders` array:
+In `src/Promptile.Host/Program.cs`, add your provider to the `dataSourceProviders` array:
 
 ```csharp
 var dataSourceProviders = new IDataSourceProvider[]
@@ -200,14 +200,14 @@ var dataSourceProviders = new IDataSourceProvider[]
 };
 ```
 
-Also add a `<ProjectReference>` to `src/Assistant.Host/Assistant.Host.csproj` and the `using MySource;` namespace import.
+Also add a `<ProjectReference>` to `src/Promptile.Host/Promptile.Host.csproj` and the `using MySource;` namespace import.
 
 ### 5. Optional: MCP tools
 
 If your plugin should expose queryable tools to AI agents, add a tools class:
 
 ```csharp
-using Assistant.Sdk;
+using Promptile.Sdk;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
@@ -234,7 +234,7 @@ public IReadOnlyList<Type> GetMcpToolTypes() => [typeof(MySourceMcpTools)];
 
 ## Adding a Plugin (IPlugin)
 
-For plugins that contribute nav tabs, dashboard widgets, and Razor pages (not just data sources), implement `IPlugin` and add it to the `plugins` array in `Program.cs`. See `src/Assistant.Sdk/IPlugin.cs` for the full interface.
+For plugins that contribute nav tabs, dashboard widgets, and Razor pages (not just data sources), implement `IPlugin` and add it to the `plugins` array in `Program.cs`. See `src/Promptile.Sdk/IPlugin.cs` for the full interface.
 
 ---
 
@@ -250,7 +250,7 @@ For plugins that contribute nav tabs, dashboard widgets, and Razor pages (not ju
 ## Pull Request Process
 
 1. Fork the repo and create a feature branch
-2. `dotnet build Assistant.sln` must pass with zero errors
+2. `dotnet build Promptile.sln` must pass with zero errors
 3. Open a PR against `main` — describe what changed and why
 4. Reference any related issue in the PR description
 5. CI will run the build automatically; fix any failures before requesting review
@@ -259,4 +259,4 @@ For plugins that contribute nav tabs, dashboard widgets, and Razor pages (not ju
 
 ## Reporting Issues
 
-Use the GitHub issue tracker. For bugs, include your OS, .NET version, and the relevant section of `~/.assistant/logs/assistant.log`.
+Use the GitHub issue tracker. For bugs, include your OS, .NET version, and the relevant section of `~/.promptile/logs/assistant.log`.

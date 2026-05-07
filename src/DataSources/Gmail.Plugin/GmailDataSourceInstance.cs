@@ -1,6 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using Assistant.Sdk;
+using Promptile.Sdk;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Auth.OAuth2.Flows;
 using Google.Apis.Gmail.v1;
@@ -31,7 +31,7 @@ public class GmailDataSourceInstance : IDataSourceInstance
         Config = config;
         _stateDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".assistant", "datasources", config.Id);
+            ".promptile", "datasources", config.Id);
         Directory.CreateDirectory(_stateDir);
     }
 
@@ -89,7 +89,7 @@ public class GmailDataSourceInstance : IDataSourceInstance
     public Task<DataSourceStatus> GetStatusAsync()
     {
         if (LoadAppCredentials() == null)
-            return Task.FromResult(new DataSourceStatus(false, "~/.assistant/google-credentials.json not found"));
+            return Task.FromResult(new DataSourceStatus(false, "~/.promptile/google-credentials.json not found"));
 
         if (!Config.Config.TryGetValue("refreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             return Task.FromResult(new DataSourceStatus(false, "Authorization required",
@@ -330,7 +330,7 @@ public class GmailDataSourceInstance : IDataSourceInstance
 
     private static readonly string CredentialsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".assistant", "google-credentials.json");
+        ".promptile", "google-credentials.json");
 
     private static (string ClientId, string ClientSecret)? LoadAppCredentials()
     {

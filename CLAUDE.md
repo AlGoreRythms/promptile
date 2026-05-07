@@ -5,10 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```bash
-dotnet build Assistant.sln                                        # Build all projects
-dotnet run --project src/Assistant.Host -- serve                  # Web UI + tray icon on http://localhost:5309
-dotnet run --project src/Assistant.Host -- serve --no-browser
-dotnet run --project src/Assistant.Host -- mcp                    # MCP server mode (stdio transport)
+dotnet build Promptile.sln                                        # Build all projects
+dotnet run --project src/Promptile.Host -- serve                  # Web UI + tray icon on http://localhost:5309
+dotnet run --project src/Promptile.Host -- serve --no-browser
+dotnet run --project src/Promptile.Host -- mcp                    # MCP server mode (stdio transport)
 ```
 
 No test project exists yet.
@@ -22,10 +22,10 @@ No test project exists yet.
 ### Solution Structure
 
 ```
-Assistant.sln
+Promptile.sln
   src/
-    Assistant.Sdk/    — Plugin contracts and shared abstractions
-    Assistant.Host/   — Executable: tray, web server, AI service, settings
+    Promptile.Sdk/    — Plugin contracts and shared abstractions
+    Promptile.Host/   — Executable: tray, web server, AI service, settings
 ```
 
 ### Two Operating Modes
@@ -35,11 +35,11 @@ Assistant.sln
 
 ### Plugin System
 
-Plugins implement `IPlugin` (in `Assistant.Sdk`). The host loads plugins at startup, calls `ConfigureServices` and `ConfigureApp`, and collects nav items, dashboard widgets, MCP tool types, and background services.
+Plugins implement `IPlugin` (in `Promptile.Sdk`). The host loads plugins at startup, calls `ConfigureServices` and `ConfigureApp`, and collects nav items, dashboard widgets, MCP tool types, and background services.
 
 - **No dynamic loading** — plugins are project references compiled into one binary. Add plugin instances to the `plugins` array in `Program.cs`.
-- **Separate data dir per plugin** — `~/.assistant/{pluginId}/`
-- **Optional SQLite DB per plugin** — `~/.assistant/{pluginId}/{pluginId}.db`
+- **Separate data dir per plugin** — `~/.promptile/{pluginId}/`
+- **Optional SQLite DB per plugin** — `~/.promptile/{pluginId}/{pluginId}.db`
 - **Single DI container** — plugins register into the host's container and consume shared services.
 - **Razor Class Libraries** — plugin pages are composed at build time.
 
@@ -49,11 +49,11 @@ Plugins that implement `INotificationSource` are wired to `NotificationHub` at s
 1. Shows a native system notification (macOS via `osascript`; Windows/Linux stubs ready to fill in)
 2. Logs the event (future: activate AI assistant to process it)
 
-**Runtime state**: `~/.assistant/settings.json` (host), `~/.assistant/{pluginId}/` (per-plugin data).
+**Runtime state**: `~/.promptile/settings.json` (host), `~/.promptile/{pluginId}/` (per-plugin data).
 
 ## Key Layers
 
-### Assistant.Sdk (`src/Assistant.Sdk/`)
+### Promptile.Sdk (`src/Promptile.Sdk/`)
 
 Plugin contracts — all abstractions a plugin sees:
 
@@ -71,11 +71,11 @@ Plugin contracts — all abstractions a plugin sees:
 | `IWebSearch.cs` | `SearchAsync(query)` + `FetchAsync(url)` — web research |
 | `IPlugin.cs` | Also defines `ICaptureTarget`, `PluginContext`, `DashboardWidget`, `NavItem` |
 
-### Assistant.Host (`src/Assistant.Host/`)
+### Promptile.Host (`src/Promptile.Host/`)
 
 | File | Purpose |
 |------|---------|
-| `Program.cs` | Entry point: sets up `~/.assistant/`, loads plugins, routes to serve/mcp mode |
+| `Program.cs` | Entry point: sets up `~/.promptile/`, loads plugins, routes to serve/mcp mode |
 | `Services/Tray/TrayHost.cs` | Builds web server on background thread, runs native tray on main thread |
 | `Services/Tray/MacTrayHost.cs` | P/Invoke to macOS AppKit — status item "A", polling status menu, `osascript` notifications |
 | `Services/Tray/WindowsTrayHost.cs` | Stub (currently just cancellation token — Windows toast TBD) |
@@ -83,7 +83,7 @@ Plugin contracts — all abstractions a plugin sees:
 | `Services/AiService.cs` | `ClaudeCliService` (spawns `claude` CLI), `ClaudeApiService` (Anthropic SDK) |
 | `Services/AiSettingsAdapter.cs` | `SettingsAwareAiService` — picks provider at call time; `AiSettingsAdapter` bridges settings → `IAiSettings` |
 | `Services/AiServiceResolver.cs` | `IAiServiceResolver` impl — returns default service (extend here for named agents) |
-| `Services/SettingsService.cs` | Loads/saves `AssistantSettings` from `~/.assistant/settings.json` |
+| `Services/SettingsService.cs` | Loads/saves `AssistantSettings` from `~/.promptile/settings.json` |
 | `Services/PluginRegistry.cs` | Aggregates nav items, widgets, capture targets; respects disabled-plugin settings |
 | `Services/NotificationHub.cs` | `INotificationBus` impl — routes plugin events to `ITrayHost.ShowNotification` |
 | `Services/NotificationService.cs` | `INotificationService` impl — thin bridge to `ITrayHost` |
@@ -95,7 +95,7 @@ Plugin contracts — all abstractions a plugin sees:
 | `Pages/Settings.cshtml` | AI provider, model, API key settings |
 | `Pages/Shared/_Layout.cshtml` | Nav bar — "ASSISTANT" logo, dynamic plugin tabs from `PluginRegistry` |
 
-### AssistantSettings (`~/.assistant/settings.json`)
+### AssistantSettings (`~/.promptile/settings.json`)
 
 | Field | Purpose |
 |-------|---------|
@@ -109,9 +109,9 @@ Plugin contracts — all abstractions a plugin sees:
 
 ### Adding a Plugin
 
-1. Create `src/MySource.Plugin/` as a Razor Class Library referencing `Assistant.Sdk`
+1. Create `src/MySource.Plugin/` as a Razor Class Library referencing `Promptile.Sdk`
 2. Implement `IPlugin` (and optionally `INotificationSource`, `ICaptureTarget`, `ITrayStatusProvider`)
-3. Add a `<ProjectReference>` to `Assistant.Host.csproj`
+3. Add a `<ProjectReference>` to `Promptile.Host.csproj`
 4. Instantiate and add to the `plugins` array in `Program.cs`
 
 ## REST API (Host)

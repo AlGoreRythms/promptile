@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using System.Text;
-using Assistant.Sdk;
+using Promptile.Sdk;
 using ModelContextProtocol.Server;
 using GmailMessage = Google.Apis.Gmail.v1.Data.Message;
 

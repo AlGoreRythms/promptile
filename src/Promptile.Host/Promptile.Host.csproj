@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Promptile.Host</RootNamespace>
+  </PropertyGroup>
+
+  <!-- On macOS, output directly into the .app bundle so the process runs as a bundled app.
+       UNUserNotificationCenter (and macOS in general) require this. -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin\$(Configuration)\net9.0\Promptile.app\Contents\MacOS\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Anthropic.SDK" Version="5.10.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.*" />
+    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.*" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Promptile.Sdk\Promptile.Sdk.csproj" />
+    <ProjectReference Include="..\DataSources\Slack.Plugin\Slack.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Gmail.Plugin\Gmail.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Calendar.Plugin\Calendar.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Obsidian.Plugin\Obsidian.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Linear.Plugin\Linear.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\GitHub.Plugin\GitHub.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Jira.Plugin\Jira.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Folder.Plugin\Folder.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Asana.Plugin\Asana.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Rss.Plugin\Rss.Plugin.csproj" />
+  </ItemGroup>
+
+  <!-- Build the .app bundle and ad-hoc sign it so macOS grants notification permission -->
+  <Target Name="BundleAndSign" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <PropertyGroup>
+      <_ContentsDir>$([System.IO.Path]::GetFullPath('$(OutputPath)../'))</_ContentsDir>
+      <_BundleDir>$([System.IO.Path]::GetFullPath('$(OutputPath)../../'))</_BundleDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ContentsDir)" />
+    <Copy SourceFiles="$(ProjectDir)Info.plist" DestinationFolder="$(_ContentsDir)" SkipUnchangedFiles="true" />
+    <!-- Ad-hoc sign the bundle (every file then the bundle itself) -->
+    <Exec Command="bash &quot;$(ProjectDir)../../sign-app.sh&quot; &quot;$(_BundleDir)&quot;" WorkingDirectory="$(ProjectDir)../../" />
+  </Target>
+
+</Project>

@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 namespace Jira;
 
@@ -48,7 +48,7 @@ public class JiraDataSourceInstance : IDataSourceInstance
         _pollSeconds = int.TryParse(config.Config.GetValueOrDefault("pollIntervalSeconds"), out var s) ? s : 300;
         _stateDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".assistant", "datasources", config.Id);
+            ".promptile", "datasources", config.Id);
         Directory.CreateDirectory(_stateDir);
     }
 

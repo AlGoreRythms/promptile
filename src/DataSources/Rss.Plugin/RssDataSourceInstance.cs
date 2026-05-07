@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 namespace Rss;
 
@@ -42,7 +42,7 @@ public class RssDataSourceInstance : IDataSourceInstance
         _pollSeconds = int.TryParse(config.Config.GetValueOrDefault("pollIntervalSeconds"), out var s) ? s : 900;
         _stateDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".assistant", "datasources", config.Id);
+            ".promptile", "datasources", config.Id);
         Directory.CreateDirectory(_stateDir);
     }
 

@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 namespace Obsidian;
 

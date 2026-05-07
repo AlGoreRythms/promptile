@@ -1,8 +1,8 @@
 #!/bin/bash
-# Ad-hoc signs Assistant.app for local development.
+# Ad-hoc signs Promptile.app for local development.
 # Usage: sign-app.sh [bundle-path]  (defaults to Debug build)
 set -e
-BUNDLE="${1:-src/Assistant.Host/bin/Debug/net9.0/Assistant.app}"
+BUNDLE="${1:-src/Promptile.Host/bin/Debug/net9.0/Promptile.app}"
 MACOS="$BUNDLE/Contents/MacOS"
 
 # Remove non-macOS runtime directories — they confuse codesign

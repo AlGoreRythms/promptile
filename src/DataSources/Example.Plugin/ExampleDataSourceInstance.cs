@@ -1,6 +1,6 @@
 // This is a minimal example IDataSourceInstance showing the expected lifecycle.
 // Replace the SyncAsync method body with real API calls for your data source.
-using Assistant.Sdk;
+using Promptile.Sdk;
 
 namespace ExamplePlugin;
 
@@ -17,7 +17,7 @@ public class ExampleDataSourceInstance : IDataSourceInstance
     private Task? _pollTask;
     private bool _connected;
 
-    // State directory for this instance: ~/.assistant/datasources/{id}/
+    // State directory for this instance: ~/.promptile/datasources/{id}/
     private readonly string _stateDir;
 
     public ExampleDataSourceInstance(DataSourceConfig config)
@@ -25,7 +25,7 @@ public class ExampleDataSourceInstance : IDataSourceInstance
         Config = config;
         _stateDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".assistant", "datasources", config.Id);
+            ".promptile", "datasources", config.Id);
         Directory.CreateDirectory(_stateDir);
     }
 
