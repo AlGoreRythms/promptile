@@ -96,7 +96,8 @@ public class GmailDataSourceInstance : IDataSourceInstance
                 AuthUrl: $"/api/gmail-authorize/{Config.Id}"));
 
         if (_gmail == null)
-            return Task.FromResult(new DataSourceStatus(false, "Not connected"));
+            return Task.FromResult(new DataSourceStatus(false, "Token expired — re-authorization required",
+                AuthUrl: $"/api/gmail-authorize/{Config.Id}"));
 
         return Task.FromResult(new DataSourceStatus(true, _connectedEmail));
     }

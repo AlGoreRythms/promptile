@@ -206,9 +206,17 @@
 {
     <div class="card" style="text-align:center; padding:3rem">
         <h2>No data sources configured</h2>
-        <p class="text-muted mt-1">
-            Connect Slack, Gmail, Obsidian, and more to give the Assistant visibility into your world.
+        <p class="text-muted mt-1" style="max-width:38rem; display:inline-block">
+            Connect your tools to give Promptile visibility into your world. Synced data powers dashboard widgets, work jobs, memory pages, and MCP tools.
         </p>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; margin:1.25rem 0">
+            @foreach (var p in Model.Providers)
+            {
+                <span style="display:inline-flex; align-items:center; gap:0.35rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:0.35rem 0.65rem; font-size:0.85rem">
+                    @p.Icon <span>@p.DisplayName</span>
+                </span>
+            }
+        </div>
         @if (!Model.ShowAdd)
         {
             <div class="mt-2"><a href="/DataSources?add=true" class="btn">+ Add your first source</a></div>

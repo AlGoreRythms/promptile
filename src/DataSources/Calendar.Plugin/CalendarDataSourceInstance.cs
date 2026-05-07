@@ -98,7 +98,8 @@ public class CalendarDataSourceInstance : IDataSourceInstance
                 AuthUrl: $"/api/calendar-authorize/{Config.Id}"));
 
         if (_calendar == null)
-            return Task.FromResult(new DataSourceStatus(false, "Not connected"));
+            return Task.FromResult(new DataSourceStatus(false, "Token expired — re-authorization required",
+                AuthUrl: $"/api/calendar-authorize/{Config.Id}"));
 
         return Task.FromResult(new DataSourceStatus(true, _connectedEmail));
     }

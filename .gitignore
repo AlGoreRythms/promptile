@@ -17,3 +17,9 @@ logs/
 
 # Claude local settings (not for source control)
 .claude/settings.local.json
+
+# Test results and coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml

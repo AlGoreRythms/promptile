@@ -246,7 +246,7 @@
 <div class="settings-panel" data-panel="providers">
     <form method="post" asp-page-handler="SaveAgents" class="card mb-2">
         <h2>Providers</h2>
-        <p class="text-sm text-muted mt-1 mb-3">Three tiers used by the assistant for tasks of different complexity.</p>
+        <p class="text-sm text-muted mt-1 mb-3">Three tiers used for tasks of different complexity. Light runs most often (widgets, quick lookups); Medium handles balanced tasks (summaries, chat); Heavy powers deep analysis (briefings, work jobs).</p>
         @foreach (var tier in new[] { "Light", "Medium", "Heavy" })
         {
             var t = tier.ToLower();

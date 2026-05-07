@@ -160,9 +160,26 @@ button.mem-pg-btn.active { background: var(--accent); color: #fff; border-color:
     <div class="dash-page" data-page-id="@pageId" id="dash-page-@(pageId == "" ? "home" : pageId)">
         @if (isEmpty)
         {
-            <div class="card" style="text-align:center; padding:3rem; color:var(--text-muted)">
-                <div style="font-size:0.9rem">No widgets on this page — click <strong>+ Add Widget</strong> to add one.</div>
-            </div>
+            @if (pageId == "" && !Model.Widgets.Any())
+            {
+                <div class="card" style="text-align:center; padding:3rem 2rem">
+                    <div style="font-size:1.4rem; margin-bottom:0.5rem">👋</div>
+                    <h2 style="margin:0 0 0.5rem">Welcome to Promptile</h2>
+                    <p class="text-muted" style="margin:0 0 1.5rem; max-width:36rem; display:inline-block">
+                        Connect data sources, then add widgets that run AI prompts against your data on a schedule.
+                    </p>
+                    <div class="flex gap-2" style="justify-content:center; flex-wrap:wrap">
+                        <a href="/DataSources?add=true" class="btn">1. Add a data source</a>
+                        <button onclick="showWidgetForm()">2. Add a widget</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card" style="text-align:center; padding:3rem; color:var(--text-muted)">
+                    <div style="font-size:0.9rem">No widgets on this page — click <strong>+ Add Widget</strong> to add one.</div>
+                </div>
+            }
         }
         <div class="grid-stack" data-page-id="@pageId">
             @foreach (var item in pageWidgets)
