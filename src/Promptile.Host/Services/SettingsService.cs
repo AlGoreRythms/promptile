@@ -27,7 +27,7 @@ public class AgentDefinition
 public class AssistantSettings
 {
     public string InformationStorePath { get; set; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Promptile");
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".promptile", "store");
 
     public AgentTierSettings Light { get; set; } = new();
     public AgentTierSettings Medium { get; set; } = new();
