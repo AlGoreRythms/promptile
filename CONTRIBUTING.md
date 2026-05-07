@@ -9,8 +9,8 @@ Thank you for your interest in contributing. This document covers development se
 **Requirements:** [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9)
 
 ```bash
-git clone https://github.com/AlGoreRythms/Assistant.git
-cd Assistant
+git clone https://github.com/AlGoreRythms/promptile.git
+cd promptile
 dotnet build Promptile.sln
 ```
 

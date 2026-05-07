@@ -33,8 +33,8 @@ Promptile syncs your external data sources — Slack, Gmail, Calendar, GitHub, L
 ## Quick Start
 
 ```bash
-git clone https://github.com/AlGoreRythms/Assistant.git
-cd Assistant
+git clone https://github.com/AlGoreRythms/promptile.git
+cd promptile
 dotnet build Promptile.sln
 dotnet run --project src/Promptile.Host -- serve
 ```
