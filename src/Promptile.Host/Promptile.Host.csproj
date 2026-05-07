@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Promptile.Sdk\Promptile.Sdk.csproj" />
     <ProjectReference Include="..\DataSources\Slack.Plugin\Slack.Plugin.csproj" />
     <ProjectReference Include="..\DataSources\Gmail.Plugin\Gmail.Plugin.csproj" />
+    <ProjectReference Include="..\DataSources\Gmail.Imap.Plugin\Gmail.Imap.Plugin.csproj" />
     <ProjectReference Include="..\DataSources\Calendar.Plugin\Calendar.Plugin.csproj" />
     <ProjectReference Include="..\DataSources\Obsidian.Plugin\Obsidian.Plugin.csproj" />
     <ProjectReference Include="..\DataSources\Linear.Plugin\Linear.Plugin.csproj" />

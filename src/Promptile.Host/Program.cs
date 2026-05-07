@@ -12,6 +12,7 @@ using Promptile.Host.Services.Tray;
 using Promptile.Sdk;
 using Slack;
 using Gmail;
+using GmailImap;
 using Calendar;
 using Obsidian;
 using Linear;
@@ -45,6 +46,7 @@ public static class Program
         {
             new SlackDataSourceProvider(),
             new GmailDataSourceProvider(),
+            new GmailImapDataSourceProvider(),
             new CalendarDataSourceProvider(),
             new ObsidianDataSourceProvider(),
             new LinearDataSourceProvider(),
