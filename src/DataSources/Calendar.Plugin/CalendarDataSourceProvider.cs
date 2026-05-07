@@ -20,7 +20,14 @@ public class CalendarDataSourceProvider : IDataSourceProvider
             Placeholder: "300"),
     ];
 
-    public IReadOnlyList<DataSourceField> GetPreAuthFields() => [];
+    public IReadOnlyList<DataSourceField> GetPreAuthFields() =>
+    [
+        new("clientId", "Client ID", "text", Required: true,
+            Placeholder: "123456789-abc.apps.googleusercontent.com",
+            Help: "Create a Desktop OAuth 2.0 client at Google Cloud Console → APIs & Services → Credentials."),
+        new("clientSecret", "Client Secret", "password", Required: true,
+            Placeholder: "GOCSPX-..."),
+    ];
 
     public string? GetAuthStartUrl(string instanceId) => $"/api/calendar-authorize/{instanceId}";
 

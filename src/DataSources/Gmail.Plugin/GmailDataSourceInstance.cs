@@ -41,16 +41,15 @@ public class GmailDataSourceInstance : IDataSourceInstance
     {
         if (!Config.Config.TryGetValue("refreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             return;
-
-        var creds = LoadAppCredentials();
-        if (creds == null) return;
+        if (!Config.Config.TryGetValue("clientId", out var clientId) || string.IsNullOrEmpty(clientId)) return;
+        if (!Config.Config.TryGetValue("clientSecret", out var clientSecret) || string.IsNullOrEmpty(clientSecret)) return;
 
         _store = services.GetService(typeof(IInformationStore)) as IInformationStore;
         _sync = services.GetService(typeof(ISyncReporter)) as ISyncReporter;
 
         try
         {
-            _gmail = BuildService(creds.Value.ClientId, creds.Value.ClientSecret, refreshToken);
+            _gmail = BuildService(clientId, clientSecret, refreshToken);
             var profile = await _gmail.Users.GetProfile("me").ExecuteAsync(ct);
             _connectedEmail = profile.EmailAddress;
             LoadState();
@@ -88,8 +87,8 @@ public class GmailDataSourceInstance : IDataSourceInstance
 
     public Task<DataSourceStatus> GetStatusAsync()
     {
-        if (LoadAppCredentials() == null)
-            return Task.FromResult(new DataSourceStatus(false, "~/.promptile/google-credentials.json not found"));
+        if (!Config.Config.TryGetValue("clientId", out var cid) || string.IsNullOrEmpty(cid))
+            return Task.FromResult(new DataSourceStatus(false, "Edit this source to add your Client ID and Client Secret"));
 
         if (!Config.Config.TryGetValue("refreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             return Task.FromResult(new DataSourceStatus(false, "Authorization required",
@@ -326,24 +325,6 @@ public class GmailDataSourceInstance : IDataSourceInstance
     {
         var path = Path.Combine(_stateDir, "state.json");
         File.WriteAllText(path, JsonSerializer.Serialize(new GmailState(_lastHistoryId)));
-    }
-
-    private static readonly string CredentialsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".promptile", "google-credentials.json");
-
-    private static (string ClientId, string ClientSecret)? LoadAppCredentials()
-    {
-        if (!File.Exists(CredentialsPath)) return null;
-        try
-        {
-            var doc = JsonDocument.Parse(File.ReadAllText(CredentialsPath)).RootElement;
-            var clientId = doc.GetProperty("clientId").GetString() ?? "";
-            var clientSecret = doc.GetProperty("clientSecret").GetString() ?? "";
-            return string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret)
-                ? null : (clientId, clientSecret);
-        }
-        catch { return null; }
     }
 
     private static GmailService BuildService(string clientId, string clientSecret, string refreshToken)

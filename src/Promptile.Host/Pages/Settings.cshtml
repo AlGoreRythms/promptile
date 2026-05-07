@@ -43,7 +43,6 @@
     <button class="settings-tab" data-tab="providers">Providers</button>
     <button class="settings-tab" data-tab="agents">Agents</button>
     <button class="settings-tab" data-tab="automation">Automation</button>
-    <button class="settings-tab" data-tab="integrations">Integrations</button>
     <button class="settings-tab" data-tab="system">System</button>
     <button class="settings-tab" data-tab="security">Security</button>
 </div>
@@ -586,30 +585,6 @@
     </form>
 </div>
 
-<!-- Integrations -->
-<div class="settings-panel" data-panel="integrations">
-    <form method="post" asp-page-handler="SaveGoogle" class="card mb-2">
-        <h2>Google</h2>
-        <p class="text-sm text-muted mt-1 mb-3">Required for Gmail data sources. Create a Desktop OAuth app at <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> → APIs &amp; Services → Credentials.</p>
-        <div class="mb-3">
-            <label class="text-sm text-muted">Client ID</label>
-            <input type="text" name="GoogleClientId" value="@Model.GoogleClientId"
-                   placeholder="123456789-abc.apps.googleusercontent.com" style="font-family:monospace" />
-        </div>
-        <div class="mb-3">
-            <label class="text-sm text-muted">Client Secret</label>
-            <input type="password" name="GoogleClientSecret" value="@Model.GoogleClientSecret"
-                   placeholder="GOCSPX-..." style="font-family:monospace" />
-        </div>
-        <div class="flex justify-between items-center mt-2">
-            @if (!string.IsNullOrEmpty(Model.GoogleMessage))
-            { <span class="text-sm" style="color:var(--success)">@Model.GoogleMessage</span> }
-            else { <span></span> }
-            <button type="submit">Save</button>
-        </div>
-    </form>
-</div>
-
 <!-- System -->
 <div class="settings-panel" data-panel="system">
     <form method="post" asp-page-handler="SaveStore" class="card mb-2">
@@ -807,7 +782,7 @@ function showTab(name) {
 }
 
 (function() {
-    var tabs = ['profile', 'sources', 'plugins', 'providers', 'agents', 'automation', 'integrations', 'system', 'security'];
+    var tabs = ['profile', 'sources', 'plugins', 'providers', 'agents', 'automation', 'system', 'security'];
 
     // Prefer query param (used by redirect after source actions), then hash
     var urlParams = new URLSearchParams(window.location.search);
@@ -820,8 +795,6 @@ function showTab(name) {
     { <text>hash = hash || 'providers';</text> }
     @if (!string.IsNullOrEmpty(Model.SchedulerMessage) || !string.IsNullOrEmpty(Model.WatchlistMessage) || !string.IsNullOrEmpty(Model.NotificationsMessage) || !string.IsNullOrEmpty(Model.DigestMessage))
     { <text>hash = hash || 'automation';</text> }
-    @if (!string.IsNullOrEmpty(Model.GoogleMessage))
-    { <text>hash = hash || 'integrations';</text> }
     @if (!string.IsNullOrEmpty(Model.StoreMessage))
     { <text>hash = hash || 'system';</text> }
     @if (!string.IsNullOrEmpty(Model.SecurityMessage))

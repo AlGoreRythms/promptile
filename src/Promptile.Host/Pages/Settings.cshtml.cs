@@ -26,19 +26,12 @@ public class SettingsModel : PageModel
         _registry = registry;
     }
 
-    private static readonly string GoogleCredentialsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".promptile", "google-credentials.json");
-
     public AssistantSettings Settings { get; set; } = new();
     public bool ClaudeCliAvailable { get; set; }
     public bool ApiKeyEnvSet { get; set; }
     public List<DataSourceConfig> SourceConfigs { get; set; } = [];
     public Dictionary<string, DataSourceStatus> SourceStatuses { get; set; } = [];
     public IReadOnlyList<IDataSourceProvider> SourceProviders { get; set; } = [];
-    public string GoogleClientId { get; set; } = "";
-    public string GoogleClientSecret { get; set; } = "";
-    public string? GoogleMessage { get; set; }
     public string? AgentsMessage { get; set; }
     public string? StoreMessage { get; set; }
     public string? NotificationsMessage { get; set; }
@@ -56,7 +49,6 @@ public class SettingsModel : PageModel
     {
         Settings = await _settings.LoadAsync();
         Agents = Settings.Agents;
-        LoadGoogleCredentials();
         CheckStatus();
         await LoadSourcesAsync();
         await LoadPluginsAsync();
@@ -117,7 +109,7 @@ public class SettingsModel : PageModel
         }
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         StoreMessage = "Store path saved.";
         CheckStatus();
         return Page();
@@ -131,7 +123,7 @@ public class SettingsModel : PageModel
         s.Heavy = ReadTier("heavy");
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         AgentsMessage = "Agent settings saved.";
         CheckStatus();
         return Page();
@@ -147,27 +139,13 @@ public class SettingsModel : PageModel
             && Request.Form[$"{prefix}_thinking"].Contains("true"),
     };
 
-    public async Task<IActionResult> OnPostSaveGoogleAsync()
-    {
-        var clientId = Request.Form["GoogleClientId"].ToString().Trim();
-        var clientSecret = Request.Form["GoogleClientSecret"].ToString().Trim();
-        var json = JsonSerializer.Serialize(new { clientId, clientSecret }, new JsonSerializerOptions { WriteIndented = true });
-        await System.IO.File.WriteAllTextAsync(GoogleCredentialsPath, json);
-        Settings = await _settings.LoadAsync();
-        GoogleClientId = clientId;
-        GoogleClientSecret = clientSecret;
-        GoogleMessage = "Google credentials saved.";
-        CheckStatus();
-        return Page();
-    }
-
     public async Task<IActionResult> OnPostSaveProfileAsync()
     {
         var s = await _settings.LoadAsync();
         s.UserProfile = Request.Form["UserProfile"].ToString();
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         ProfileMessage = "Profile saved.";
         CheckStatus();
         return Page();
@@ -179,7 +157,7 @@ public class SettingsModel : PageModel
         s.ChatSystemPrompt = Request.Form["ChatSystemPrompt"].ToString();
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         ChatPromptMessage = "Chat prompt saved.";
         CheckStatus();
         return Page();
@@ -191,7 +169,7 @@ public class SettingsModel : PageModel
         s.NotifyOnJobCompletion = Request.Form["NotifyOnJobCompletion"] == "true";
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         NotificationsMessage = "Notification settings saved.";
         CheckStatus();
         return Page();
@@ -217,7 +195,7 @@ public class SettingsModel : PageModel
             .Where(l => l.Length > 0).ToList();
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         WatchlistMessage = "Watchlist saved.";
         CheckStatus();
         return Page();
@@ -237,7 +215,7 @@ public class SettingsModel : PageModel
         s.ScheduledJobs.Add(new ScheduledJob(slug, name, hour, dow, prompt, tier));
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         SchedulerMessage = $"Job \"{name}\" added.";
         CheckStatus();
         return Page();
@@ -249,7 +227,7 @@ public class SettingsModel : PageModel
         s.ScheduledJobs = s.ScheduledJobs.Where(j => j.Slug != slug).ToList();
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         SchedulerMessage = "Job removed.";
         CheckStatus();
         return Page();
@@ -270,7 +248,7 @@ public class SettingsModel : PageModel
         if (!string.IsNullOrEmpty(pw)) s.Digest.SmtpPassword = pw;
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         DigestMessage = "Digest settings saved.";
         CheckStatus();
         return Page();
@@ -283,7 +261,7 @@ public class SettingsModel : PageModel
         s.EmbeddingModel = Request.Form["EmbeddingModel"].ToString().Trim() is { Length: > 0 } m ? m : null;
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         EmbeddingMessage = "Embedding settings saved.";
         CheckStatus();
         return Page();
@@ -297,23 +275,11 @@ public class SettingsModel : PageModel
             .Where(l => l.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         await _settings.SaveAsync(s);
         Settings = s;
-        LoadGoogleCredentials();
+
         SecurityMessage = "Hidden names saved.";
         CheckStatus();
         await LoadSourcesAsync();
         return Page();
-    }
-
-    private void LoadGoogleCredentials()
-    {
-        if (!System.IO.File.Exists(GoogleCredentialsPath)) return;
-        try
-        {
-            var doc = JsonDocument.Parse(System.IO.File.ReadAllText(GoogleCredentialsPath)).RootElement;
-            GoogleClientId = doc.GetProperty("clientId").GetString() ?? "";
-            GoogleClientSecret = doc.GetProperty("clientSecret").GetString() ?? "";
-        }
-        catch { }
     }
 
     private async Task LoadPluginsAsync()

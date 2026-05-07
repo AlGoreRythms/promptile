@@ -10,27 +10,23 @@ namespace Promptile.Host.Services;
 public static class CalendarOAuthHelper
 {
     private const string RedirectUri = "http://localhost:5309/api/calendar-callback";
-    private static readonly string CredentialsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".promptile", "google-credentials.json");
-
     private static readonly ConcurrentDictionary<string, string> _pendingStates = new();
 
     public static IResult BeginAuthorize(string id, DataSourceManager manager)
     {
-        var creds = GmailOAuthHelper.TryLoadCredentials();
-        if (creds == null)
-            return Results.Content(MissingCredentialsHtml(), "text/html; charset=utf-8");
-
         var instances = manager.GetInstances("google-calendar");
         var instance = instances.FirstOrDefault(i => i.Id == id);
         if (instance == null)
             return Results.NotFound("Data source not found");
 
+        if (!instance.Config.Config.TryGetValue("clientId", out var clientId) || string.IsNullOrEmpty(clientId) ||
+            !instance.Config.Config.TryGetValue("clientSecret", out var clientSecret) || string.IsNullOrEmpty(clientSecret))
+            return Results.Content(MissingCredentialsHtml(), "text/html; charset=utf-8");
+
         var state = Guid.NewGuid().ToString("N");
         _pendingStates[state] = id;
 
-        var flow = BuildFlow(creds.Value.ClientId, creds.Value.ClientSecret);
+        var flow = BuildFlow(clientId, clientSecret);
         var authUrl = flow.CreateAuthorizationCodeRequest(RedirectUri).Build();
 
         var uriBuilder = new UriBuilder(authUrl);
@@ -55,17 +51,17 @@ public static class CalendarOAuthHelper
         if (!_pendingStates.TryRemove(state, out var datasourceId))
             return Results.BadRequest("Invalid or expired state parameter");
 
-        var creds = GmailOAuthHelper.TryLoadCredentials();
-        if (creds == null)
-            return Results.Content(MissingCredentialsHtml(), "text/html; charset=utf-8");
-
         var all = await sources.LoadAsync();
         var cfg = all.FirstOrDefault(c => c.Id == datasourceId);
         if (cfg == null) return Results.NotFound("Data source no longer exists");
 
+        if (!cfg.Config.TryGetValue("clientId", out var clientId) || string.IsNullOrEmpty(clientId) ||
+            !cfg.Config.TryGetValue("clientSecret", out var clientSecret) || string.IsNullOrEmpty(clientSecret))
+            return Results.Content(MissingCredentialsHtml(), "text/html; charset=utf-8");
+
         try
         {
-            var flow = BuildFlow(creds.Value.ClientId, creds.Value.ClientSecret);
+            var flow = BuildFlow(clientId, clientSecret);
             var tokenResponse = await flow.ExchangeCodeForTokenAsync("user", code, RedirectUri, CancellationToken.None);
 
             var newConfig = new Dictionary<string, string>(cfg.Config)
@@ -97,7 +93,11 @@ public static class CalendarOAuthHelper
         });
 
     private static string MissingCredentialsHtml() =>
-        "<html><body><h2>⚠️ Google credentials not found</h2>" +
-        "<p>Configure your Google OAuth credentials in Settings first.</p>" +
-        "<p><a href='/Settings'>Settings</a></p></body></html>";
+        "<html><head><meta charset='utf-8'></head><body>" +
+        "<h2>⚠️ Google credentials not configured</h2>" +
+        "<p>Edit this data source and enter your Client ID and Client Secret.</p>" +
+        "<p>Get credentials at <a href=\"https://console.cloud.google.com\">Google Cloud Console</a> → " +
+        "APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID (Desktop app).</p>" +
+        "<p><a href=\"/DataSources\">Back to Data Sources</a></p>" +
+        "</body></html>";
 }

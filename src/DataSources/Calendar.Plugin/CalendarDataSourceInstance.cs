@@ -24,10 +24,6 @@ public class CalendarDataSourceInstance : IDataSourceInstance
     private string? _connectedEmail;
     private readonly string _stateDir;
 
-    private static readonly string GoogleCredentialsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".promptile", "google-credentials.json");
-
     private static readonly string[] Scopes = ["https://www.googleapis.com/auth/calendar.readonly"];
 
     public CalendarDataSourceInstance(DataSourceConfig config)
@@ -43,16 +39,15 @@ public class CalendarDataSourceInstance : IDataSourceInstance
     {
         if (!Config.Config.TryGetValue("refreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             return;
-
-        var creds = LoadAppCredentials();
-        if (creds == null) return;
+        if (!Config.Config.TryGetValue("clientId", out var clientId) || string.IsNullOrEmpty(clientId)) return;
+        if (!Config.Config.TryGetValue("clientSecret", out var clientSecret) || string.IsNullOrEmpty(clientSecret)) return;
 
         _store = services.GetService(typeof(IInformationStore)) as IInformationStore;
         _sync = services.GetService(typeof(ISyncReporter)) as ISyncReporter;
 
         try
         {
-            _calendar = BuildService(creds.Value.ClientId, creds.Value.ClientSecret, refreshToken);
+            _calendar = BuildService(clientId, clientSecret, refreshToken);
             // Quick connectivity test
             var cal = await _calendar.Calendars.Get("primary").ExecuteAsync(ct);
             _connectedEmail = cal.Summary ?? "Connected";
@@ -90,8 +85,8 @@ public class CalendarDataSourceInstance : IDataSourceInstance
 
     public Task<DataSourceStatus> GetStatusAsync()
     {
-        if (LoadAppCredentials() == null)
-            return Task.FromResult(new DataSourceStatus(false, "~/.promptile/google-credentials.json not found"));
+        if (!Config.Config.TryGetValue("clientId", out var cid) || string.IsNullOrEmpty(cid))
+            return Task.FromResult(new DataSourceStatus(false, "Edit this source to add your Client ID and Client Secret"));
 
         if (!Config.Config.TryGetValue("refreshToken", out var refreshToken) || string.IsNullOrEmpty(refreshToken))
             return Task.FromResult(new DataSourceStatus(false, "Authorization required",
@@ -242,17 +237,4 @@ public class CalendarDataSourceInstance : IDataSourceInstance
         });
     }
 
-    private static (string ClientId, string ClientSecret)? LoadAppCredentials()
-    {
-        if (!File.Exists(GoogleCredentialsPath)) return null;
-        try
-        {
-            var doc = JsonDocument.Parse(File.ReadAllText(GoogleCredentialsPath)).RootElement;
-            var clientId = doc.GetProperty("clientId").GetString() ?? "";
-            var clientSecret = doc.GetProperty("clientSecret").GetString() ?? "";
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret)) return null;
-            return (clientId, clientSecret);
-        }
-        catch { return null; }
-    }
 }
