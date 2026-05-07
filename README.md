@@ -66,7 +66,7 @@ Open **http://localhost:5309/DataSources** and click **Add data source**. Prompt
 | RSS | Feed URL |
 | Local folder | Directory path |
 
-Each source syncs data to `~/Documents/Assistant/` and makes it available to all widgets, jobs, and memory pages.
+Each source syncs data to `~/Documents/Promptile/` and makes it available to all widgets, jobs, and memory pages.
 
 ---
 
