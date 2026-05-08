@@ -39,7 +39,7 @@
   </ItemGroup>
 
   <!-- Build the .app bundle and ad-hoc sign it so macOS grants notification permission -->
-  <Target Name="BundleAndSign" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+  <Target Name="BundleAndSign" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('OSX')) AND '$(SkipBundleAndSign)' != 'true'">
     <PropertyGroup>
       <_ContentsDir>$([System.IO.Path]::GetFullPath('$(OutputPath)../'))</_ContentsDir>
       <_BundleDir>$([System.IO.Path]::GetFullPath('$(OutputPath)../../'))</_BundleDir>

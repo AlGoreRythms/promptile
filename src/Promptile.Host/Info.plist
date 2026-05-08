@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.assistant.app</string>
+    <string>com.promptile.app</string>
     <key>CFBundleName</key>
-    <string>Assistant</string>
+    <string>Promptile</string>
     <key>CFBundleDisplayName</key>
-    <string>Assistant</string>
+    <string>Promptile</string>
     <key>CFBundleExecutable</key>
-    <string>Assistant.Host</string>
+    <string>Promptile.Host</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundlePackageType</key>
