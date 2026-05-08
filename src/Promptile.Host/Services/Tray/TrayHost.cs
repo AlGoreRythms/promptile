@@ -28,7 +28,11 @@ public static class TrayHost
         var serverReady = new ManualResetEventSlim(false);
         var serverThread = new Thread(() =>
         {
-            var builder = WebApplication.CreateBuilder(args);
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                Args = args,
+                ContentRootPath = AppContext.BaseDirectory,
+            });
             builder.Environment.EnvironmentName = "Development";
             builder.Services.AddRazorPages();
             builder.Services.AddSingleton<ITrayHost>(tray);

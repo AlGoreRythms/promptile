@@ -46,6 +46,8 @@
     </PropertyGroup>
     <MakeDir Directories="$(_ContentsDir)" />
     <Copy SourceFiles="$(ProjectDir)Info.plist" DestinationFolder="$(_ContentsDir)" SkipUnchangedFiles="true" />
+    <!-- Copy wwwroot into the bundle so the app can find static assets at runtime -->
+    <Exec Command="rsync -a --delete &quot;$(ProjectDir)wwwroot/&quot; &quot;$(OutputPath)wwwroot/&quot;" />
     <!-- Ad-hoc sign the bundle (every file then the bundle itself) -->
     <Exec Command="bash &quot;$(ProjectDir)../../sign-app.sh&quot; &quot;$(_BundleDir)&quot;" WorkingDirectory="$(ProjectDir)../../" />
   </Target>
