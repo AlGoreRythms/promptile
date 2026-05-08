@@ -45,7 +45,9 @@
       <_BundleDir>$([System.IO.Path]::GetFullPath('$(OutputPath)../../'))</_BundleDir>
     </PropertyGroup>
     <MakeDir Directories="$(_ContentsDir)" />
+    <MakeDir Directories="$(_ContentsDir)Resources\" />
     <Copy SourceFiles="$(ProjectDir)Info.plist" DestinationFolder="$(_ContentsDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Promptile.icns" DestinationFolder="$(_ContentsDir)Resources\" SkipUnchangedFiles="true" />
     <!-- Copy wwwroot into the bundle so the app can find static assets at runtime -->
     <Exec Command="rsync -a --delete &quot;$(ProjectDir)wwwroot/&quot; &quot;$(OutputPath)wwwroot/&quot;" />
     <!-- Ad-hoc sign the bundle (every file then the bundle itself) -->

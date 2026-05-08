@@ -25,6 +25,8 @@ dotnet publish "$PROJECT" \
 
 echo "→ Assembling bundle..."
 cp src/Promptile.Host/Info.plist "$CONTENTS/"
+mkdir -p "$CONTENTS/Resources"
+cp src/Promptile.Host/Promptile.icns "$CONTENTS/Resources/"
 rsync -a "$WWWROOT/" "$MACOS/wwwroot/"
 
 echo "→ Signing (ad-hoc)..."
