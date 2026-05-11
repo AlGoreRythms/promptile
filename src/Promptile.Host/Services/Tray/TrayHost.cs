@@ -54,10 +54,7 @@ public static class TrayHost
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<BriefingService>());
             builder.Services.AddSingleton<CodeAnalysisService>();
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<CodeAnalysisService>());
-            builder.Services.AddSingleton<WatchlistService>();
-            builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<WatchlistService>());
-            builder.Services.AddSingleton<SchedulerService>();
-            builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<SchedulerService>());
+
             builder.Services.AddSingleton<DigestService>();
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<DigestService>());
             builder.Services.AddSingleton<EmbeddingService>();

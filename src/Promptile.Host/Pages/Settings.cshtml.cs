@@ -37,8 +37,6 @@ public class SettingsModel : PageModel
     public string? NotificationsMessage { get; set; }
     public string? ChatPromptMessage { get; set; }
     public string? ProfileMessage { get; set; }
-    public string? WatchlistMessage { get; set; }
-    public string? SchedulerMessage { get; set; }
     public string? DigestMessage { get; set; }
     public string? EmbeddingMessage { get; set; }
     public string? SecurityMessage { get; set; }
@@ -183,52 +181,6 @@ public class SettingsModel : PageModel
         await _settings.SaveAsync(s);
         _settings.InvalidateCache();
         Settings = s;
-        CheckStatus();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostSaveWatchlistAsync()
-    {
-        var s = await _settings.LoadAsync();
-        var raw = Request.Form["Watchlist"].ToString();
-        s.Watchlist = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(l => l.Length > 0).ToList();
-        await _settings.SaveAsync(s);
-        Settings = s;
-
-        WatchlistMessage = "Watchlist saved.";
-        CheckStatus();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostAddJobAsync()
-    {
-        var s = await _settings.LoadAsync();
-        var name = Request.Form["JobName"].ToString().Trim();
-        var slug = System.Text.RegularExpressions.Regex.Replace(name.ToLower(), @"[^a-z0-9]+", "-").Trim('-');
-        if (string.IsNullOrEmpty(slug)) slug = Guid.NewGuid().ToString("N")[..8];
-        int.TryParse(Request.Form["JobHour"].ToString(), out var hour);
-        var dayStr = Request.Form["JobDayOfWeek"].ToString();
-        int? dow = dayStr == "" ? null : int.TryParse(dayStr, out var d) ? d : null;
-        var prompt = Request.Form["JobPrompt"].ToString().Trim();
-        var tier = Request.Form["JobTier"].ToString() is { Length: > 0 } t ? t : "heavy";
-        s.ScheduledJobs.Add(new ScheduledJob(slug, name, hour, dow, prompt, tier));
-        await _settings.SaveAsync(s);
-        Settings = s;
-
-        SchedulerMessage = $"Job \"{name}\" added.";
-        CheckStatus();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostDeleteJobAsync(string slug)
-    {
-        var s = await _settings.LoadAsync();
-        s.ScheduledJobs = s.ScheduledJobs.Where(j => j.Slug != slug).ToList();
-        await _settings.SaveAsync(s);
-        Settings = s;
-
-        SchedulerMessage = "Job removed.";
         CheckStatus();
         return Page();
     }

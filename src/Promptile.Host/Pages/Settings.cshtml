@@ -400,121 +400,6 @@
 
 <!-- Automation -->
 <div class="settings-panel" data-panel="automation">
-    <div class="card mb-2">
-        <h2>Scheduled Jobs</h2>
-        <p class="text-sm text-muted mt-1 mb-3">Intelligence runs that fire automatically at a set time. Output is written to the information store under <code>_Assistant/Scheduled/{slug}/</code>.</p>
-        @if (!string.IsNullOrEmpty(Model.SchedulerMessage))
-        {
-            <p class="text-sm" style="color:var(--success); margin-bottom:0.5rem">@Model.SchedulerMessage</p>
-        }
-        @if (Model.Settings.ScheduledJobs.Any())
-        {
-            <table style="width:100%; font-size:0.82rem; border-collapse:collapse; margin-bottom:1rem">
-                <thead>
-                    <tr style="border-bottom:1px solid var(--border); color:var(--text-muted)">
-                        <th style="text-align:left; padding:0.3rem 0.5rem">Name</th>
-                        <th style="text-align:left; padding:0.3rem 0.5rem">Time</th>
-                        <th style="text-align:left; padding:0.3rem 0.5rem">Tier</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var job in Model.Settings.ScheduledJobs)
-                    {
-                        var day = job.DayOfWeek.HasValue ? ((DayOfWeek)job.DayOfWeek.Value).ToString() : "Daily";
-                        <tr style="border-bottom:1px solid var(--border)">
-                            <td style="padding:0.4rem 0.5rem">@job.Name</td>
-                            <td style="padding:0.4rem 0.5rem">@($"{job.Hour:D2}:00") · @day</td>
-                            <td style="padding:0.4rem 0.5rem">@job.Tier</td>
-                            <td style="padding:0.4rem 0.5rem; text-align:right">
-                                <form method="post" asp-page-handler="DeleteJob" style="display:inline">
-                                    <input type="hidden" name="slug" value="@job.Slug" />
-                                    <button class="secondary" style="font-size:0.75rem; padding:0.15rem 0.5rem"
-                                        onclick="return confirm('Remove this job?')">Remove</button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        <details style="margin-top:0.5rem">
-            <summary style="cursor:pointer; font-size:0.85rem; color:var(--text-muted); user-select:none">+ Add job</summary>
-            <form method="post" asp-page-handler="AddJob" style="margin-top:0.75rem">
-                <div class="flex gap-1" style="flex-wrap:wrap; align-items:flex-end">
-                    <div>
-                        <label class="text-sm text-muted">Name</label>
-                        <input type="text" name="JobName" placeholder="Morning Brief" style="width:140px" required />
-                    </div>
-                    <div>
-                        <label class="text-sm text-muted">Hour (0–23)</label>
-                        <input type="number" name="JobHour" min="0" max="23" value="7" style="width:70px" />
-                    </div>
-                    <div>
-                        <label class="text-sm text-muted">Day</label>
-                        <select name="JobDayOfWeek" style="width:auto">
-                            <option value="">Daily</option>
-                            <option value="1">Monday</option>
-                            <option value="2">Tuesday</option>
-                            <option value="3">Wednesday</option>
-                            <option value="4">Thursday</option>
-                            <option value="5">Friday</option>
-                            <option value="6">Saturday</option>
-                            <option value="0">Sunday</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-sm text-muted">Tier</label>
-                        <select name="JobTier" style="width:auto">
-                            <option value="heavy">Heavy</option>
-                            <option value="medium">Medium</option>
-                            <option value="light">Light</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <label class="text-sm text-muted">Prompt template (supports {date}, {dayOfWeek})</label>
-                    <textarea name="JobPrompt" rows="3"
-                              style="width:100%; font-size:0.82rem; font-family:monospace; resize:vertical; margin-top:0.25rem"
-                              placeholder="Write a {dayOfWeek} summary of this week's key developments and upcoming priorities."></textarea>
-                </div>
-                <div class="flex justify-end mt-2">
-                    <button type="submit">Add Job</button>
-                </div>
-            </form>
-        </details>
-    </div>
-
-    <form method="post" asp-page-handler="SaveMemory" class="card mb-2">
-        <h2>Memory</h2>
-        <p class="text-sm text-muted mt-1 mb-3">
-            Memory pages are configured in <a href="/Memory">Memory</a>.
-            Set the scan interval here.
-        </p>
-        <div style="display:flex;align-items:center;gap:0.75rem">
-            <label class="text-sm text-muted" style="white-space:nowrap">Scan interval (minutes)</label>
-            <input type="number" name="MemoryScanIntervalMinutes" value="@Model.Settings.MemoryScanIntervalMinutes"
-                   min="1" max="1440" style="max-width:100px" />
-        </div>
-        <div class="flex justify-end mt-2">
-            <button type="submit">Save</button>
-        </div>
-    </form>
-
-    <form method="post" asp-page-handler="SaveWatchlist" class="card mb-2">
-        <h2>Watchlist</h2>
-        <p class="text-sm text-muted mt-1 mb-3">Keywords or <code>/regex/</code> patterns to watch for in synced data. One per line. Matching triggers an immediate tray notification.</p>
-        <textarea name="Watchlist" rows="5"
-                  style="width:100%; font-size:0.85rem; font-family:monospace; resize:vertical"
-                  placeholder="Alex Johnson&#10;/acquisition|merger/&#10;your-company-name">@string.Join("\n", Model.Settings.Watchlist)</textarea>
-        <div class="flex justify-between items-center mt-2">
-            @if (!string.IsNullOrEmpty(Model.WatchlistMessage))
-            { <span class="text-sm" style="color:var(--success)">@Model.WatchlistMessage</span> }
-            else { <span></span> }
-            <button type="submit">Save</button>
-        </div>
-    </form>
-
     <form method="post" asp-page-handler="SaveNotifications" class="card mb-2">
         <h2>Notifications</h2>
         <div class="mt-2">
@@ -793,7 +678,7 @@ function showTab(name) {
     { <text>hash = hash || 'profile';</text> }
     @if (!string.IsNullOrEmpty(Model.AgentsMessage) || !string.IsNullOrEmpty(Model.EmbeddingMessage))
     { <text>hash = hash || 'providers';</text> }
-    @if (!string.IsNullOrEmpty(Model.SchedulerMessage) || !string.IsNullOrEmpty(Model.WatchlistMessage) || !string.IsNullOrEmpty(Model.NotificationsMessage) || !string.IsNullOrEmpty(Model.DigestMessage))
+    @if (!string.IsNullOrEmpty(Model.NotificationsMessage) || !string.IsNullOrEmpty(Model.DigestMessage))
     { <text>hash = hash || 'automation';</text> }
     @if (!string.IsNullOrEmpty(Model.StoreMessage))
     { <text>hash = hash || 'system';</text> }

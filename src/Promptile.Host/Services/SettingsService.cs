@@ -63,12 +63,6 @@ public class AssistantSettings
 
     public bool NotifyOnJobCompletion { get; set; } = true;
 
-    // Keywords/patterns to watch for across all synced data (one per line; /regex/ syntax supported)
-    public List<string> Watchlist { get; set; } = [];
-
-    // Scheduled intelligence runs
-    public List<ScheduledJob> ScheduledJobs { get; set; } = [];
-
     // Short-lived context items injected into every chat prompt (auto-expire after 24h)
     public List<EphemeralContextEntry> EphemeralContext { get; set; } = [];
 
@@ -100,14 +94,6 @@ public class AssistantSettings
     public bool IsHidden(string name) =>
         HiddenNames.Any(h => !string.IsNullOrEmpty(h) && name.Contains(h, StringComparison.OrdinalIgnoreCase));
 }
-
-public record ScheduledJob(
-    string Slug,
-    string Name,
-    int Hour,
-    int? DayOfWeek,   // null = daily; 0 = Sun … 6 = Sat
-    string Prompt,
-    string Tier = "heavy");
 
 public record EphemeralContextEntry(string Text, DateTimeOffset ExpiresAt);
 
