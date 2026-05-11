@@ -55,8 +55,6 @@ public static class TrayHost
             builder.Services.AddSingleton<CodeAnalysisService>();
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<CodeAnalysisService>());
 
-            builder.Services.AddSingleton<DigestService>();
-            builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<DigestService>());
             builder.Services.AddSingleton<EmbeddingService>();
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<EmbeddingService>());
             builder.Services.AddSingleton<SyncStatusService>();
@@ -461,16 +459,6 @@ app.MapPost("/api/dashboard/widgets/{id}/run", async (string id, SettingsService
                 return Results.Ok();
             });
 
-            app.MapGet("/api/digest/{name}", async (string name, IInformationStore store) =>
-            {
-                var path = Path.Combine(
-                    store.GetNotesPath(DigestService.DigestSource, DigestService.DigestType),
-                    $"{name}.md");
-                if (!File.Exists(path)) return Results.NotFound();
-                return Results.Text(await File.ReadAllTextAsync(path));
-            });
-
-            app.MapGet("/Digests", () => Results.Redirect("/Briefs#History"));
 
             // Gmail OAuth endpoints
             app.MapGet("/api/gmail-authorize/{id}", (string id, DataSourceManager manager) =>

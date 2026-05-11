@@ -20,7 +20,6 @@ public class BriefsModel : PageModel
     }
 
     public List<BriefGroup> Groups { get; set; } = [];
-    public List<(string Name, string Label)> Digests { get; set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -35,17 +34,6 @@ public class BriefsModel : PageModel
         foreach (var name in briefNames)
             Groups.Add(await LoadGroupAsync(name));
 
-        var digestsPath = _store.GetNotesPath(DigestService.DigestSource, DigestService.DigestType);
-        if (Directory.Exists(digestsPath))
-        {
-            foreach (var file in Directory.GetFiles(digestsPath, "*.md")
-                .OrderByDescending(System.IO.File.GetLastWriteTimeUtc))
-            {
-                var n = Path.GetFileNameWithoutExtension(file);
-                var label = DateOnly.TryParse(n, out var date) ? date.ToString("MMM d, yyyy") : n;
-                Digests.Add((n, label));
-            }
-        }
     }
 
     private async Task<BriefGroup> LoadGroupAsync(string name)

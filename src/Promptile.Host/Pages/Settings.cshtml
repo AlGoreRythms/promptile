@@ -417,57 +417,6 @@
         </div>
     </form>
 
-    <form method="post" asp-page-handler="SaveDigest" class="card mb-2">
-        <h2>Daily Digest</h2>
-        <p class="text-sm text-muted mt-1 mb-3">Automatically compose a digest from the brief, situations, and actions each day. View digests at <a href="/Digests">/Digests</a>.</p>
-        <div class="mb-2">
-            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.9rem">
-                <input type="checkbox" name="DigestEnabled" value="true" @(Model.Settings.Digest.Enabled ? "checked" : "") />
-                Enable daily digest
-            </label>
-        </div>
-        <div class="flex gap-1 mb-2" style="flex-wrap:wrap; align-items:flex-end">
-            <div>
-                <label class="text-sm text-muted">Generate at hour (0–23)</label>
-                <input type="number" name="DigestHour" min="0" max="23" value="@Model.Settings.Digest.Hour" style="width:70px" />
-            </div>
-            <div>
-                <label class="text-sm text-muted">Send to email (optional)</label>
-                <input type="email" name="DigestToEmail" value="@Model.Settings.Digest.ToEmail"
-                       placeholder="you@example.com" style="width:200px" />
-            </div>
-        </div>
-        <details style="margin-bottom:0.75rem">
-            <summary style="cursor:pointer; font-size:0.82rem; color:var(--text-muted); user-select:none">SMTP settings (for email delivery)</summary>
-            <div class="flex gap-1 mt-2" style="flex-wrap:wrap; align-items:flex-end">
-                <div>
-                    <label class="text-sm text-muted">SMTP host</label>
-                    <input type="text" name="DigestSmtpHost" value="@Model.Settings.Digest.SmtpHost"
-                           placeholder="smtp.gmail.com" style="width:180px" />
-                </div>
-                <div>
-                    <label class="text-sm text-muted">Port</label>
-                    <input type="number" name="DigestSmtpPort" value="@Model.Settings.Digest.SmtpPort" style="width:70px" />
-                </div>
-                <div>
-                    <label class="text-sm text-muted">Username</label>
-                    <input type="text" name="DigestSmtpUser" value="@Model.Settings.Digest.SmtpUser"
-                           style="width:180px" autocomplete="off" />
-                </div>
-                <div>
-                    <label class="text-sm text-muted">Password</label>
-                    <input type="password" name="DigestSmtpPassword" placeholder="(unchanged)"
-                           style="width:160px" autocomplete="new-password" />
-                </div>
-            </div>
-        </details>
-        <div class="flex justify-between items-center">
-            @if (!string.IsNullOrEmpty(Model.DigestMessage))
-            { <span class="text-sm" style="color:var(--success)">@Model.DigestMessage</span> }
-            else { <span></span> }
-            <button type="submit">Save</button>
-        </div>
-    </form>
 </div>
 
 <!-- System -->
@@ -678,7 +627,7 @@ function showTab(name) {
     { <text>hash = hash || 'profile';</text> }
     @if (!string.IsNullOrEmpty(Model.AgentsMessage) || !string.IsNullOrEmpty(Model.EmbeddingMessage))
     { <text>hash = hash || 'providers';</text> }
-    @if (!string.IsNullOrEmpty(Model.NotificationsMessage) || !string.IsNullOrEmpty(Model.DigestMessage))
+    @if (!string.IsNullOrEmpty(Model.NotificationsMessage))
     { <text>hash = hash || 'automation';</text> }
     @if (!string.IsNullOrEmpty(Model.StoreMessage))
     { <text>hash = hash || 'system';</text> }

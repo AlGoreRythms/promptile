@@ -66,9 +66,6 @@ public class AssistantSettings
     // Short-lived context items injected into every chat prompt (auto-expire after 24h)
     public List<EphemeralContextEntry> EphemeralContext { get; set; } = [];
 
-    // Daily digest configuration
-    public DigestSettings Digest { get; set; } = new();
-
     // Embedding endpoint for semantic search (LMStudio / OpenAI compatible)
     public string? EmbeddingBaseUrl { get; set; }
     public string? EmbeddingModel { get; set; }
@@ -151,17 +148,6 @@ public class UserDashboardWidget
     public int? GridH { get; set; }
     public string RefreshSchedule { get; set; } = ""; // "" = 24h default; "daily:HH:mm" = specific UTC time
     public int ContextDays { get; set; } = 7;
-}
-
-public class DigestSettings
-{
-    public bool Enabled { get; set; } = false;
-    public int Hour { get; set; } = 7;
-    public string? SmtpHost { get; set; }
-    public int SmtpPort { get; set; } = 587;
-    public string? SmtpUser { get; set; }
-    public string? SmtpPassword { get; set; }
-    public string? ToEmail { get; set; }
 }
 
 public class SettingsService

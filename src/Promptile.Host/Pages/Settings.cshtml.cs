@@ -37,7 +37,6 @@ public class SettingsModel : PageModel
     public string? NotificationsMessage { get; set; }
     public string? ChatPromptMessage { get; set; }
     public string? ProfileMessage { get; set; }
-    public string? DigestMessage { get; set; }
     public string? EmbeddingMessage { get; set; }
     public string? SecurityMessage { get; set; }
     public List<PluginsModel.PluginInfo> PluginInfos { get; set; } = [];
@@ -181,27 +180,6 @@ public class SettingsModel : PageModel
         await _settings.SaveAsync(s);
         _settings.InvalidateCache();
         Settings = s;
-        CheckStatus();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostSaveDigestAsync()
-    {
-        var s = await _settings.LoadAsync();
-        s.Digest.Enabled = Request.Form["DigestEnabled"] == "true";
-        int.TryParse(Request.Form["DigestHour"].ToString(), out var hour);
-        s.Digest.Hour = Math.Clamp(hour, 0, 23);
-        s.Digest.ToEmail = Request.Form["DigestToEmail"].ToString().Trim() is { Length: > 0 } e ? e : null;
-        s.Digest.SmtpHost = Request.Form["DigestSmtpHost"].ToString().Trim() is { Length: > 0 } h ? h : null;
-        int.TryParse(Request.Form["DigestSmtpPort"].ToString(), out var port);
-        s.Digest.SmtpPort = port > 0 ? port : 587;
-        s.Digest.SmtpUser = Request.Form["DigestSmtpUser"].ToString().Trim() is { Length: > 0 } u ? u : null;
-        var pw = Request.Form["DigestSmtpPassword"].ToString();
-        if (!string.IsNullOrEmpty(pw)) s.Digest.SmtpPassword = pw;
-        await _settings.SaveAsync(s);
-        Settings = s;
-
-        DigestMessage = "Digest settings saved.";
         CheckStatus();
         return Page();
     }

@@ -101,17 +101,6 @@
     margin-bottom: 1rem; padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--border);
 }
-/* History panel */
-.digest-layout { display: flex; gap: 1.5rem; }
-.digest-list { width: 160px; flex-shrink: 0; }
-.digest-item {
-    display: block; padding: 0.4rem 0.6rem; border-radius: 5px;
-    font-size: 0.85rem; color: var(--text-muted); cursor: pointer;
-    border: none; background: none; width: 100%; text-align: left;
-}
-.digest-item:hover { background: var(--bg); color: var(--text); }
-.digest-item.active { background: var(--bg); color: var(--accent); font-weight: 600; }
-.digest-content { flex: 1; min-width: 0; }
 /* Tabs */
 .brief-tabs {
     display: flex; gap: 0; margin-bottom: 1.75rem;
@@ -129,16 +118,12 @@
 
 <h1 style="margin-bottom:1.25rem">Briefs</h1>
 
-@if (Model.Groups.Count > 1 || Model.Digests.Any())
+@if (Model.Groups.Count > 1)
 {
     <div class="brief-tabs">
         @foreach (var group in Model.Groups)
         {
             <button class="brief-tab" data-group="@group.Name">@group.Name</button>
-        }
-        @if (Model.Digests.Any())
-        {
-            <button class="brief-tab" data-group="History" style="margin-left:auto">History</button>
         }
     </div>
 }
@@ -282,24 +267,6 @@
     </div>
 }
 
-@if (Model.Digests.Any())
-{
-    <div class="brief-group" data-group="History">
-        <div class="digest-layout">
-            <div class="digest-list">
-                @foreach (var (name, label) in Model.Digests)
-                {
-                    <button class="digest-item" data-digest="@name">@label</button>
-                }
-            </div>
-            <div class="digest-content card">
-                <div class="md-content" id="digest-body" style="font-size:0.88rem; line-height:1.6">
-                    <span style="color:var(--text-muted)">Select a date to view.</span>
-                </div>
-            </div>
-        </div>
-    </div>
-}
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
@@ -333,20 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tabs = document.querySelectorAll('.brief-tab');
     tabs.forEach(t => t.addEventListener('click', () => activateGroup(t.dataset.group)));
-
-    // Digest history
-    async function loadDigest(name) {
-        document.querySelectorAll('.digest-item').forEach(d =>
-            d.classList.toggle('active', d.dataset.digest === name));
-        const body = document.getElementById('digest-body');
-        body.innerHTML = '<span style="color:var(--text-muted)">Loading…</span>';
-        const resp = await fetch(`/api/digest/${encodeURIComponent(name)}`);
-        body.innerHTML = resp.ok ? marked.parse(await resp.text()) : '<span style="color:var(--danger)">Failed to load.</span>';
-    }
-    document.querySelectorAll('.digest-item').forEach(d =>
-        d.addEventListener('click', () => loadDigest(d.dataset.digest)));
-    const firstDigest = document.querySelector('.digest-item');
-    if (firstDigest) loadDigest(firstDigest.dataset.digest);
 
     const firstGroup = document.querySelector('.brief-group');
     if (firstGroup) {
