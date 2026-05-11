@@ -113,11 +113,12 @@ public static class Program
         var mcpBuilder = host.Services.AddMcpServer()
             .WithStdioServerTransport();
 
-        host.Services.AddSingleton<MemoryService>();
-        host.Services.AddHostedService(sp => sp.GetRequiredService<MemoryService>());
+        // Memory feature temporarily disabled
+        // host.Services.AddSingleton<MemoryService>();
+        // host.Services.AddHostedService(sp => sp.GetRequiredService<MemoryService>());
 
         var settings = settingsService.LoadSync();
-        var toolTypes = new List<Type> { typeof(InformationStoreMcpTools), typeof(MemoryMcpTools) };
+        var toolTypes = new List<Type> { typeof(InformationStoreMcpTools) /*, typeof(MemoryMcpTools)*/ };
 
         foreach (var plugin in plugins)
         {
