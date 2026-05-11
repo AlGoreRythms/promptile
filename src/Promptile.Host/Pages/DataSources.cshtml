@@ -34,7 +34,7 @@
     var provider = Model.Providers.FirstOrDefault(p => p.Type == selectedType);
     var isOAuth = provider?.GetAuthStartUrl("_") != null;
     var isNewOAuthSource = isOAuth && editing == null;
-    var oauthDone = editing != null && editing.Config.ContainsKey("refreshToken");
+    var oauthDone = editing != null && editing.Config.ContainsKey("refreshToken") && editing.Config.ContainsKey("clientId");
 
     <div class="card mb-3" style="border-color: var(--accent)">
         <h2>@(editing != null ? "Edit Data Source" : "Add Data Source")</h2>
@@ -127,6 +127,31 @@
                     @if (oauthDone)
                     {
                         <div class="text-sm mb-3" style="color:var(--success)">✓ Authorized with @provider.DisplayName</div>
+                    }
+                    @if (isOAuth && provider.GetPreAuthFields().Any())
+                    {
+                        <div style="border-top:1px solid var(--border); padding-top:1rem; margin-top:0.5rem">
+                            <div class="text-sm text-muted mb-2" style="font-weight:600; text-transform:uppercase; letter-spacing:.04em">
+                                @provider.DisplayName Credentials
+                            </div>
+                            @foreach (var field in provider.GetPreAuthFields())
+                            {
+                                var fval = editing?.Config.TryGetValue(field.Key, out var fcv) == true ? fcv : "";
+                                <div class="mb-3">
+                                    <label class="text-sm text-muted">
+                                        @field.Label
+                                        @if (field.Required) { <span style="color:var(--danger)">*</span> }
+                                    </label>
+                                    <input type="@field.FieldType" name="@field.Key" value="@(field.FieldType == "password" ? "" : fval)"
+                                           placeholder="@field.Placeholder" autocomplete="new-password"
+                                           style="@(field.FieldType == "password" ? "font-family:monospace" : "")" />
+                                    @if (!string.IsNullOrEmpty(field.Help))
+                                    {
+                                        <div class="text-sm text-muted mt-1">@field.Help</div>
+                                    }
+                                </div>
+                            }
+                        </div>
                     }
                     <div style="border-top:1px solid var(--border); padding-top:1rem; margin-top:0.5rem">
                         <div class="text-sm text-muted mb-2" style="font-weight:600; text-transform:uppercase; letter-spacing:.04em">
